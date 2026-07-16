@@ -9,9 +9,24 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans pb-10">
 
-    <header class="bg-white shadow-sm px-4 py-4 flex items-center sticky top-0 z-10">
-        <a href="/" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
-        <h1 class="text-lg font-bold text-gray-800">{{ mulk.ad }}</h1>
+    <header class="bg-white shadow-sm px-4 py-4 flex justify-between items-center sticky top-0 z-10">
+        <div class="flex items-center">
+            <a href="/" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
+            <div>
+                <h1 class="text-lg font-bold text-gray-800">{{ mulk.ad }}</h1>
+                <!-- Adres varsa ekrana bas -->
+                {% if mulk.adres %}
+                <p class="text-xs text-gray-500 mt-1 line-clamp-1"><i class="fa-solid fa-location-dot mr-1"></i>{{ mulk.adres }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Mülkü Sil Butonu -->
+        <form action="{{ url_for('mulk_sil', id=mulk.id) }}" method="POST" onsubmit="return confirm('Bu mülkü ve ona ait tüm geçmiş ödeme/kiracı kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
+            <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg transition">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </form>
     </header>
 
     <main class="p-4">
@@ -20,11 +35,25 @@
         
         {% if aktif_sozlesme %}
             <!-- KİRACI VARSA GÖSTERİLECEK KISIM -->
+            <!-- KİRACI VARSA GÖSTERİLECEK KISIM -->
             <div class="bg-blue-600 text-white rounded-xl p-5 shadow-md mb-6 relative overflow-hidden">
                 <i class="fa-solid fa-file-signature absolute -right-4 -bottom-4 text-7xl text-blue-500 opacity-30"></i>
-                <h2 class="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-1">Kiracı Bilgileri</h2>
-                <p class="text-xl font-bold mb-2">{{ aktif_sozlesme.kiraci.ad }} {{ aktif_sozlesme.kiraci.soyad }}</p>
-                <div class="flex items-center text-sm mb-1">
+                
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-1">Kiracı Bilgileri</h2>
+                        <p class="text-xl font-bold mb-2">{{ aktif_sozlesme.kiraci.ad }} {{ aktif_sozlesme.kiraci.soyad }}</p>
+                    </div>
+                    
+                    <!-- Kiracıyı Çıkar / Sözleşmeyi Bitir Butonu -->
+                    <form action="{{ url_for('sozlesme_bitir', id=aktif_sozlesme.id) }}" method="POST" onsubmit="return confirm('Kiracıyı çıkarmak istediğinize emin misiniz? Bu işlem mülkü boşa çıkartır ve yeni kiracı eklemenize olanak tanır.');">
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition z-10 relative">
+                            <i class="fa-solid fa-user-xmark mr-1"></i> Kiracıyı Çıkar
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="flex items-center text-sm mb-1 mt-2">
                     <i class="fa-solid fa-phone w-5"></i> {{ aktif_sozlesme.kiraci.telefon }}
                 </div>
                 <div class="flex items-center text-sm mb-1">
@@ -36,9 +65,67 @@
             </div>
 
             <h3 class="text-lg font-semibold text-gray-700 mb-3">Ödeme Geçmişi</h3>
-            <p class="text-sm text-gray-500 mb-4">Ödeme takip sistemi bir sonraki aşamada eklenecek.</p>
             
-            <!-- Önceki tasarımdaki Accordion yapısı buraya gelecek -->
+            <!-- Türkçe ay isimleri sözlüğü (Jinja içinde) -->
+            {% set aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'] %}
+            
+            <!-- Ödemeleri tarihe göre sıralayarak döngüye alıyoruz -->
+            <div class="space-y-3">
+                {% for odeme in aktif_sozlesme.odemeler|sort(attribute='odeme_donemi') %}
+                    
+                    {% set ay_ismi = aylar[odeme.odeme_donemi.month - 1] %}
+                    {% set yil = odeme.odeme_donemi.year %}
+                    
+                    <!-- Duruma Göre Renk ve Metin Belirleme -->
+                    {% if odeme.durum == 'odendi' %}
+                        {% set renk = 'green' %}
+                        {% set durum_yazi = 'Ödendi' %}
+                    {% elif odeme.durum == 'odenmedi' %}
+                        {% set renk = 'red' %}
+                        {% set durum_yazi = 'Ödenmedi' %}
+                    {% else %}
+                        {% set renk = 'yellow' %}
+                        {% set durum_yazi = 'Eksik / Gecikti' %}
+                    {% endif %}
+
+                    <!-- Accordion Kartı -->
+                    <details class="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <summary class="flex justify-between items-center p-4 cursor-pointer font-semibold">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-{{ renk }}-500 mr-3"></div>
+                                {{ ay_ismi }} {{ yil }}
+                            </div>
+                            <div class="flex items-center text-sm text-gray-500">
+                                <span class="mr-3 text-{{ renk }}-600 font-bold">{{ durum_yazi }}</span>
+                                <i class="fa-solid fa-chevron-down transition-transform group-open:rotate-180"></i>
+                            </div>
+                        </summary>
+                        
+                        <div class="p-4 pt-0 border-t border-gray-100 bg-gray-50 mt-2 text-sm text-gray-600">
+                            {% if odeme.durum == 'odendi' %}
+                                <div class="grid grid-cols-2 gap-2 mt-3">
+                                    <div><span class="font-semibold block">Tutar:</span> {{ odeme.odenen_miktar }} ₺</div>
+                                    <div><span class="font-semibold block">Ödeme Tarihi:</span> {{ odeme.odeme_tarihi.strftime('%d.%m.%Y') if odeme.odeme_tarihi else '-' }}</div>
+                                    {% if odeme.aciklama %}
+                                        <div class="col-span-2 mt-2"><span class="font-semibold block">Not:</span> {{ odeme.aciklama }}</div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="mt-3">
+                                    <span class="font-semibold block">Beklenen Tutar:</span> {{ aktif_sozlesme.kira_bedeli }} ₺
+                                    
+                                    <!-- Butonu tetikleyici bir formun içine aldık -->
+                                    <form action="{{ url_for('odeme_yap', id=odeme.id) }}" method="POST">
+                                        <button type="submit" class="mt-3 w-full bg-green-100 text-green-700 py-2 rounded-lg font-semibold border border-green-200 hover:bg-green-200 hover:shadow-sm transition">
+                                            Ödendi Olarak İşaretle
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </details>
+                {% endfor %}
+            </div>
 
         {% else %}
             <!-- KİRACI YOKSA GÖSTERİLECEK BOŞ DURUM KARTI -->

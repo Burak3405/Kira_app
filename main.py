@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+import calendar
+from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
@@ -103,22 +104,20 @@ def kiraci_ekle(id):
     secilen_mulk = Mulkler.query.get_or_404(id)
     
     if request.method == 'POST':
-        # Formdan gelen veriler
         ad = request.form.get('ad')
         soyad = request.form.get('soyad')
         telefon = request.form.get('telefon')
         kira_bedeli = request.form.get('kira_bedeli')
         baslangic_tarihi_str = request.form.get('baslangic_tarihi')
         
-        # String gelen tarihi Python Date objesine çeviriyoruz
         baslangic_tarihi = datetime.strptime(baslangic_tarihi_str, '%Y-%m-%d').date()
         
-        # 1. Önce Kiracıyı veritabanına ekle
+        # 1. Kiracıyı ekle ve ID'sini al
         yeni_kiraci = Kiracilar(ad=ad, soyad=soyad, telefon=telefon)
         db.session.add(yeni_kiraci)
-        db.session.flush() # Commit yapmadan yeni kiracının ID'sini almak için flush kullanırız
+        db.session.flush() 
         
-        # 2. Şimdi Mülk ve Kiracı ID'sini birleştirip Sözleşmeyi oluştur
+        # 2. Sözleşmeyi ekle ve ID'sini al
         yeni_sozlesme = Sozlesmeler(
             mulk_id=secilen_mulk.id,
             kiraci_id=yeni_kiraci.id,
@@ -126,11 +125,86 @@ def kiraci_ekle(id):
             baslangic_tarihi=baslangic_tarihi
         )
         db.session.add(yeni_sozlesme)
-        db.session.commit() # Her ikisini de kalıcı olarak kaydet
+        db.session.flush() # Sözleşme ID'sini almak için tekrar flush yapıyoruz
+        
+        # 3. 12 Aylık Ödeme Tablosunu Otomatik Oluşturma Döngüsü
+        for i in range(12):
+            # İlgili ay ve yılı hesaplıyoruz
+            ay = baslangic_tarihi.month - 1 + i
+            yil = baslangic_tarihi.year + ay // 12
+            ay = ay % 12 + 1
+            
+            # Seçili ayın kaç gün çektiğini bulup (örn: Şubat 28), gün taşmasını engelliyoruz
+            max_gun = calendar.monthrange(yil, ay)[1]
+            gun = min(baslangic_tarihi.day, max_gun)
+            
+            odeme_donemi_tarihi = date(yil, ay, gun)
+            
+            yeni_odeme = Odemeler(
+                sozlesme_id=yeni_sozlesme.id,
+                odeme_donemi=odeme_donemi_tarihi,
+                durum='odenmedi' # Varsayılan olarak ödenmedi atıyoruz
+            )
+            db.session.add(yeni_odeme)
+            
+        # Tüm işlemleri (Kiracı, Sözleşme, 12 Ay Ödeme) tek seferde veritabanına kaydet
+        db.session.commit()
         
         return redirect(url_for('mulk_detayi', id=secilen_mulk.id))
         
     return render_template('kiraci_ekle.html', mulk=secilen_mulk)
+
+@app.route('/odeme/<int:id>/ode', methods=['POST'])
+def odeme_yap(id):
+    # İlgili ödemeyi veritabanından bul
+    odeme = Odemeler.query.get_or_404(id)
+    
+    # Durumunu 'odendi' yap
+    odeme.durum = 'odendi'
+    
+    # Ödenen miktarı sözleşmedeki beklenen kira bedeline eşitle
+    odeme.odenen_miktar = odeme.sozlesme.kira_bedeli
+    
+    # Ödeme tarihini bugünün tarihi olarak ata
+    odeme.odeme_tarihi = date.today()
+    
+    # Değişiklikleri veritabanına kaydet
+    db.session.commit()
+    
+    # İşlem bitince kullanıcının geldiği mülk detay sayfasına geri döndür
+    return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
+
+@app.route('/mulk/<int:id>/sil', methods=['POST'])
+def mulk_sil(id):
+    mulk = Mulkler.query.get_or_404(id)
+    
+    # SQL Hatası (Integrity Error) almamak için önce ilişkili alt verileri temizliyoruz
+    for sozlesme in mulk.sozlesmeler:
+        for odeme in sozlesme.odemeler:
+            db.session.delete(odeme) # Önce ödemeler silinir
+        db.session.delete(sozlesme)  # Sonra sözleşmeler silinir
+        
+    db.session.delete(mulk) # En son ana mülk silinir
+    db.session.commit()
+    
+    return redirect(url_for('ana_sayfa'))
+
+@app.route('/sozlesme/<int:id>/bitir', methods=['POST'])
+def sozlesme_bitir(id):
+    sozlesme = Sozlesmeler.query.get_or_404(id)
+    
+    # Geçmişi silmiyoruz, sadece sözleşmeyi pasife çekiyoruz
+    sozlesme.aktif_mi = False
+    
+    # İsteğe bağlı: Henüz tarihi gelmemiş ve ödenmemiş gelecek ay kartlarını temizleyebilirsin
+    # Sadece ödenmiş ve eksik ödenmiş kartlar geçmiş olarak veritabanında kalır
+    for odeme in sozlesme.odemeler:
+        if odeme.durum == 'odenmedi':
+            db.session.delete(odeme)
+            
+    db.session.commit()
+    return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

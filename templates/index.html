@@ -20,6 +20,7 @@
 
     <main class="p-4">
         {% if mulkler_listesi %}
+            <!-- Mülkler Listesi (Veri Varsa) -->
             <h2 class="text-lg font-semibold text-gray-700 mb-4">Mülklerim</h2>
             <div class="space-y-4">
                 {% for mulk in mulkler_listesi %}
@@ -27,8 +28,14 @@
                     <div>
                         <h3 class="font-bold text-gray-800">{{ mulk.ad }}</h3>
                         <p class="text-sm text-gray-500">{{ mulk.tur }}</p>
+                        
+                        <!-- Adres varsa ekrana bas -->
+                        {% if mulk.adres %}
+                        <p class="text-xs text-gray-400 mt-2 line-clamp-1"><i class="fa-solid fa-location-dot mr-1"></i>{{ mulk.adres }}</p>
+                        {% endif %}
                     </div>
-                    <a href="{{ url_for('mulk_detayi', id=mulk.id) }}" class="text-blue-500 bg-blue-50 p-2 rounded-lg">
+                    
+                    <a href="{{ url_for('mulk_detayi', id=mulk.id) }}" class="text-blue-500 bg-blue-50 p-2 rounded-lg ml-2 shrink-0">
                         <i class="fa-solid fa-chevron-right"></i>
                     </a>
                 </div>
