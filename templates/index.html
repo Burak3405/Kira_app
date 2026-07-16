@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kira Takibi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans pb-20">
+
+    <header class="bg-white shadow-sm px-4 py-4 flex justify-between items-center sticky top-0 z-10">
+        <div class="text-xl font-bold text-blue-600">
+            <i class="fa-solid fa-house-chimney mr-2"></i>KiraTakibi
+        </div>
+        <div class="text-gray-500">
+            <i class="fa-solid fa-user-circle text-2xl"></i>
+        </div>
+    </header>
+
+    <main class="p-4">
+        {% if mulkler_listesi %}
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Mülklerim</h2>
+            <div class="space-y-4">
+                {% for mulk in mulkler_listesi %}
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-gray-800">{{ mulk.ad }}</h3>
+                        <p class="text-sm text-gray-500">{{ mulk.tur }}</p>
+                    </div>
+                    <a href="{{ url_for('mulk_detayi', id=mulk.id) }}" class="text-blue-500 bg-blue-50 p-2 rounded-lg">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="flex flex-col items-center justify-center mt-20 text-center">
+                <div class="bg-blue-50 text-blue-500 p-6 rounded-full mb-4">
+                    <i class="fa-solid fa-file-contract text-4xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-700 mb-2">Henüz Kayıt Yok</h2>
+                <p class="text-gray-500 mb-6 px-4">Takip ettiğiniz bir mülk veya kira sözleşmesi bulunmuyor. Hemen yeni bir kayıt oluşturun.</p>
+                <button class="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">
+                    İlk Mülkü Oluştur
+                </button>
+            </div>
+        {% endif %}
+    </main>
+
+    <a href="{{ url_for('mulk_ekle') }}" class="fixed bottom-6 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 hover:scale-105 transition-transform z-50">
+        <i class="fa-solid fa-plus"></i>
+    </a>
+
+</body>
+</html>
