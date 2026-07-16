@@ -20,9 +20,10 @@
 
     <main class="p-4">
         {% if mulkler_listesi %}
+            
             <!-- Mülkler Listesi (Veri Varsa) -->
             <h2 class="text-lg font-semibold text-gray-700 mb-4">Mülklerim</h2>
-            <div class="space-y-4">
+            <div class="space-y-4 mb-8"> <!-- Altındaki pano ile arasına boşluk koymak için mb-8 eklendi -->
                 {% for mulk in mulkler_listesi %}
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
                     <div>
@@ -41,6 +42,33 @@
                 </div>
                 {% endfor %}
             </div>
+
+            <!-- İSTATİSTİK VE PANO KARTI (Aşağı Taşındı) -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{{ istatistik.ay_ismi }} {{ istatistik.yil }} ÖZETİ</h2>
+                
+                <!-- Görsel İlerleme Çubuğu -->
+                <div class="relative w-full bg-gray-100 rounded-full h-6 mb-4 overflow-hidden border border-gray-200 shadow-inner">
+                    <div class="bg-green-500 h-6 rounded-full transition-all duration-1000 flex items-center justify-end px-2" style="width: {{ istatistik.yuzde }}%;">
+                        {% if istatistik.yuzde > 5 %}
+                            <span class="text-xs font-bold text-white">{{ istatistik.yuzde }}%</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Yazılı Detaylar -->
+                <div class="flex justify-between text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs mb-1">Tahsil Edilen</span>
+                        <span class="font-bold text-green-600 text-lg">{{ istatistik.tahsil_edilen }} ₺</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-gray-500 text-xs mb-1">Beklenen Toplam</span>
+                        <span class="font-bold text-gray-700 text-lg">{{ istatistik.beklenen }} ₺</span>
+                    </div>
+                </div>
+            </div>
+
         {% else %}
             <div class="flex flex-col items-center justify-center mt-20 text-center">
                 <div class="bg-blue-50 text-blue-500 p-6 rounded-full mb-4">
@@ -48,9 +76,10 @@
                 </div>
                 <h2 class="text-xl font-bold text-gray-700 mb-2">Henüz Kayıt Yok</h2>
                 <p class="text-gray-500 mb-6 px-4">Takip ettiğiniz bir mülk veya kira sözleşmesi bulunmuyor. Hemen yeni bir kayıt oluşturun.</p>
-                <button class="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">
+                <!-- İşlevsiz button, çalışan bir a etiketine çevrildi -->
+                <a href="{{ url_for('mulk_ekle') }}" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">
                     İlk Mülkü Oluştur
-                </button>
+                </a>
             </div>
         {% endif %}
     </main>

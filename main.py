@@ -69,7 +69,44 @@ with app.app_context():
 def ana_sayfa():
     tum_mulkler = Mulkler.query.all()
     
-    return render_template('index.html', mulkler_listesi=tum_mulkler)
+    # (Bu Ayın Özeti) 
+    bugun = date.today()
+    beklenen_toplam = 0
+    tahsil_edilen = 0
+    
+    # Sadece aktif sözleşmeleri bul
+    aktif_sozlesmeler = Sozlesmeler.query.filter_by(aktif_mi=True).all()
+    
+    for sozlesme in aktif_sozlesmeler:
+        # Bu sözleşmenin bu ayki ödemesini buluyoruz
+        for odeme in sozlesme.odemeler:
+            if odeme.odeme_donemi.month == bugun.month and odeme.odeme_donemi.year == bugun.year:
+                beklenen_toplam += float(sozlesme.kira_bedeli)
+                if odeme.durum == 'odendi':
+                    tahsil_edilen += float(odeme.odenen_miktar)
+                break # Bu ayın ödemesini bulduğumuz için döngüden çık
+
+    # Yüzdeyi hesapla 
+    yuzde = 0
+    if beklenen_toplam > 0:
+        yuzde = int((tahsil_edilen / beklenen_toplam) * 100)
+
+    # Türkçe ay ism
+    aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+    
+    # Türkçe para formatı 
+    def tr_format(deger):
+        return f"{deger:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    istatistik = {
+        'beklenen': tr_format(beklenen_toplam),
+        'tahsil_edilen': tr_format(tahsil_edilen),
+        'yuzde': yuzde,
+        'ay_ismi': aylar[bugun.month - 1],
+        'yil': bugun.year
+    }
+    
+    return render_template('index.html', mulkler_listesi=tum_mulkler, istatistik=istatistik)
 
 @app.route('/mulk/<int:id>')
 def mulk_detayi(id):
@@ -205,6 +242,25 @@ def sozlesme_bitir(id):
     db.session.commit()
     return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
 
+@app.route('/sozlesme/<int:id>/duzenle', methods=['GET', 'POST'])
+def kiraci_duzenle(id):
+    sozlesme = Sozlesmeler.query.get_or_404(id)
+    kiraci = sozlesme.kiraci
+    
+    if request.method == 'POST':
+        # Formdan gelen yeni verilerle mevcut nesneleri güncelliyoruz
+        kiraci.ad = request.form.get('ad')
+        kiraci.soyad = request.form.get('soyad')
+        kiraci.telefon = request.form.get('telefon')
+        sozlesme.kira_bedeli = float(request.form.get('kira_bedeli'))
+        
+        # Tarih güncellemesini ödeme tablosunu bozmaması için şimdilik dışarıda bırakıyoruz,
+        # Sadece isim, soyisim, telefon ve kira bedeli güncelleniyor.
+        
+        db.session.commit()
+        return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
+        
+    return render_template('kiraci_duzenle.html', sozlesme=sozlesme, kiraci=kiraci)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiracı Düzenle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <!-- Üst Bar -->
+    <header class="bg-white shadow-sm px-4 py-4 flex items-center sticky top-0 z-10">
+        <a href="{{ url_for('mulk_detayi', id=sozlesme.mulk_id) }}" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
+        <div>
+            <h1 class="text-lg font-bold text-gray-800">Bilgileri Düzenle</h1>
+        </div>
+    </header>
+
+    <main class="p-4 mt-2">
+        <form method="POST" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            
+            <h2 class="text-sm font-bold text-blue-600 mb-4 border-b pb-2">Kiracı Bilgileri</h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Ad *</label>
+                    <!-- value kısmına mevcut veriyi yazdırıyoruz -->
+                    <input type="text" name="ad" value="{{ kiraci.ad }}" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Soyad *</label>
+                    <input type="text" name="soyad" value="{{ kiraci.soyad }}" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm text-gray-600 mb-1">Telefon</label>
+                <input type="tel" name="telefon" value="{{ kiraci.telefon }}" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <h2 class="text-sm font-bold text-blue-600 mb-4 border-b pb-2">Sözleşme Bilgileri</h2>
+
+            <div class="mb-8">
+                <label class="block text-sm text-gray-600 mb-1">Aylık Kira Bedeli (₺) *</label>
+                <input type="number" step="0.01" name="kira_bedeli" value="{{ sozlesme.kira_bedeli }}" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <p class="text-xs text-gray-400 mt-2">Not: Kira bedelini değiştirmeniz, geçmişteki 'Ödendi' durumlarını bozmaz ancak bekleyen yeni ayların tutarını günceller.</p>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:bg-blue-700 transition">
+                Değişiklikleri Kaydet
+            </button>
+        </form>
+    </main>
+
+</body>
+</html>

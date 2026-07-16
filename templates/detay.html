@@ -45,12 +45,20 @@
                         <p class="text-xl font-bold mb-2">{{ aktif_sozlesme.kiraci.ad }} {{ aktif_sozlesme.kiraci.soyad }}</p>
                     </div>
                     
-                    <!-- Kiracıyı Çıkar / Sözleşmeyi Bitir Butonu -->
-                    <form action="{{ url_for('sozlesme_bitir', id=aktif_sozlesme.id) }}" method="POST" onsubmit="return confirm('Kiracıyı çıkarmak istediğinize emin misiniz? Bu işlem mülkü boşa çıkartır ve yeni kiracı eklemenize olanak tanır.');">
-                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition z-10 relative">
-                            <i class="fa-solid fa-user-xmark mr-1"></i> Kiracıyı Çıkar
-                        </button>
-                    </form>
+                    <!-- Butonlar Grubu -->
+                    <div class="flex items-center space-x-2 z-10 relative">
+                        <!-- Düzenle Butonu -->
+                        <a href="{{ url_for('kiraci_duzenle', id=aktif_sozlesme.id) }}" class="bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                            <i class="fa-solid fa-pen"></i> Düzenle
+                        </a>
+                        
+                        <!-- Kiracıyı Çıkar / Sözleşmeyi Bitir Butonu -->
+                        <form action="{{ url_for('sozlesme_bitir', id=aktif_sozlesme.id) }}" method="POST" onsubmit="return confirm('Kiracıyı çıkarmak istediğinize emin misiniz? Bu işlem mülkü boşa çıkartır ve yeni kiracı eklemenize olanak tanır.');">
+                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                                <i class="fa-solid fa-user-xmark mr-1"></i> Kiracıyı Çıkar
+                            </button>
+                        </form>
+                    </div>
                 </div>
                 
                 <div class="flex items-center text-sm mb-1 mt-2">
