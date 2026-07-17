@@ -21,7 +21,7 @@
     <main class="p-4">
         {% if mulkler_listesi %}
             
-            <!-- Mülkler Listesi (Veri Varsa) -->
+            <!-- Mülkler Listesi -->
             <h2 class="text-lg font-semibold text-gray-700 mb-4">Mülklerim</h2>
             <div class="space-y-4 mb-8"> <!-- Altındaki pano ile arasına boşluk koymak için mb-8 eklendi -->
                 {% for mulk in mulkler_listesi %}
@@ -43,7 +43,7 @@
                 {% endfor %}
             </div>
 
-            <!-- İSTATİSTİK VE PANO KARTI (Aşağı Taşındı) -->
+            <!-- İSTATİSTİK VE PANO KARTI -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
                 <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{{ istatistik.ay_ismi }} {{ istatistik.yil }} ÖZETİ</h2>
                 
@@ -76,7 +76,7 @@
                 </div>
                 <h2 class="text-xl font-bold text-gray-700 mb-2">Henüz Kayıt Yok</h2>
                 <p class="text-gray-500 mb-6 px-4">Takip ettiğiniz bir mülk veya kira sözleşmesi bulunmuyor. Hemen yeni bir kayıt oluşturun.</p>
-                <!-- İşlevsiz button, çalışan bir a etiketine çevrildi -->
+        
                 <a href="{{ url_for('mulk_ekle') }}" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">
                     İlk Mülkü Oluştur
                 </a>

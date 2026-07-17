@@ -30,12 +30,11 @@
     </header>
 
     <main class="p-4">
-        <!-- Aktif bir sözleşme olup olmadığını kontrol ediyoruz -->
+        
         {% set aktif_sozlesme = mulk.sozlesmeler | selectattr("aktif_mi", "equalto", true) | first %}
         
         {% if aktif_sozlesme %}
-            <!-- KİRACI VARSA GÖSTERİLECEK KISIM -->
-            <!-- KİRACI VARSA GÖSTERİLECEK KISIM -->
+            
             <div class="bg-blue-600 text-white rounded-xl p-5 shadow-md mb-6 relative overflow-hidden">
                 <i class="fa-solid fa-file-signature absolute -right-4 -bottom-4 text-7xl text-blue-500 opacity-30"></i>
                 
@@ -77,14 +76,12 @@
             <!-- Türkçe ay isimleri sözlüğü (Jinja içinde) -->
             {% set aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'] %}
             
-            <!-- Ödemeleri tarihe göre sıralayarak döngüye alıyoruz -->
             <div class="space-y-3">
                 {% for odeme in aktif_sozlesme.odemeler|sort(attribute='odeme_donemi') %}
                     
                     {% set ay_ismi = aylar[odeme.odeme_donemi.month - 1] %}
                     {% set yil = odeme.odeme_donemi.year %}
                     
-                    <!-- Duruma Göre Renk ve Metin Belirleme -->
                     {% if odeme.durum == 'odendi' %}
                         {% set renk = 'green' %}
                         {% set durum_yazi = 'Ödendi' %}
@@ -117,8 +114,7 @@
                                 <div class="grid grid-cols-2 gap-2 mt-3">
                                     <div><span class="font-semibold block">Ödenen Tutar:</span> {{ odeme.odenen_miktar }} ₺</div>
                                     <div><span class="font-semibold block">Ödeme Tarihi:</span> {{ odeme.odeme_tarihi.strftime('%d.%m.%Y') if odeme.odeme_tarihi else '-' }}</div>
-                                    
-                                    <!-- Eksik ödeme ise otomatik hesaplanan sarı uyarı kutusu -->
+                                
                                     {% if odeme.durum == 'eksik' %}
                                     <div class="col-span-2 mt-2 bg-yellow-50 text-yellow-700 p-3 rounded-lg border border-yellow-200 text-xs">
                                         <i class="fa-solid fa-triangle-exclamation mr-1"></i> Beklenen kiradan <strong>{{ aktif_sozlesme.kira_bedeli - odeme.odenen_miktar }} ₺</strong> eksik yatırıldı.
