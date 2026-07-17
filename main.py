@@ -69,7 +69,7 @@ with app.app_context():
 def ana_sayfa():
     tum_mulkler = Mulkler.query.all()
     
-    # (Bu Ayın Özeti) 
+    # --- İSTATİSTİK HESAPLAMA (Bu Ayın Özeti) ---
     bugun = date.today()
     beklenen_toplam = 0
     tahsil_edilen = 0
@@ -82,19 +82,23 @@ def ana_sayfa():
         for odeme in sozlesme.odemeler:
             if odeme.odeme_donemi.month == bugun.month and odeme.odeme_donemi.year == bugun.year:
                 beklenen_toplam += float(sozlesme.kira_bedeli)
-                if odeme.durum == 'odendi':
+                
+                # DÜZELTİLEN KISIM BURASI:
+                # Sadece 'odendi' olanları değil, 'eksik' olanları da topluyoruz
+                if odeme.durum == 'odendi' or odeme.durum == 'eksik':
                     tahsil_edilen += float(odeme.odenen_miktar)
+                
                 break # Bu ayın ödemesini bulduğumuz için döngüden çık
 
-    # Yüzdeyi hesapla 
+    # Yüzdeyi hesapla (Sıfıra bölünme hatasını engelliyoruz)
     yuzde = 0
     if beklenen_toplam > 0:
         yuzde = int((tahsil_edilen / beklenen_toplam) * 100)
 
-    # Türkçe ay ism
+    # Türkçe ay ismini ayarlıyoruz
     aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
     
-    # Türkçe para formatı 
+    # Rakamları Türkçe para formatına (15.000,00) çeviren ufak bir yardımcı fonksiyon
     def tr_format(deger):
         return f"{deger:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
@@ -261,6 +265,37 @@ def kiraci_duzenle(id):
         return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
         
     return render_template('kiraci_duzenle.html', sozlesme=sozlesme, kiraci=kiraci)
+
+@app.route('/odeme/<int:id>/detayli_ode', methods=['POST'])
+def detayli_odeme_yap(id):
+    odeme = Odemeler.query.get_or_404(id)
+    
+    # Formdan gelen verileri alıyoruz
+    gelen_miktar = request.form.get('odenen_miktar')
+    gelen_tarih = request.form.get('odeme_tarihi')
+    aciklama = request.form.get('aciklama')
+    
+    # 1. Ödenen Miktarı ata (HTML formunda required/zorunlu yapacağız)
+    odeme.odenen_miktar = float(gelen_miktar)
+    
+    # 2. Tarih girilmemişse bugünü ata
+    if gelen_tarih:
+        odeme.odeme_tarihi = datetime.strptime(gelen_tarih, '%Y-%m-%d').date()
+    else:
+        odeme.odeme_tarihi = date.today()
+        
+    # 3. Açıklamayı ekle (Boş olabilir)
+    odeme.aciklama = aciklama
+    
+    # 4. Durumu güncelle (Yatırılan para tam mı, eksik mi?)
+    if odeme.odenen_miktar >= odeme.sozlesme.kira_bedeli:
+        odeme.durum = 'odendi'
+    else:
+        odeme.durum = 'eksik'
+        
+    db.session.commit()
+    return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
