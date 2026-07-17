@@ -40,6 +40,8 @@ class Sozlesmeler(db.Model):
     mulk_id = db.Column(db.Integer, db.ForeignKey('mulkler.id'), nullable=False)
     kiraci_id = db.Column(db.Integer, db.ForeignKey('kiracilar.id'), nullable=False)
     kira_bedeli = db.Column(db.Numeric(10, 2), nullable=False)
+    kapora = db.Column(db.String(100), nullable=True) 
+    aktif_mi = db.Column(db.Boolean, default=True) #?
     baslangic_tarihi = db.Column(db.Date, nullable=False)
     bitis_tarihi = db.Column(db.Date)
     aktif_mi = db.Column(db.Boolean, default=True)
@@ -109,8 +111,86 @@ def ana_sayfa():
 def mulk_detayi(id):
     secilen_mulk = Mulkler.query.get_or_404(id)
     
-    return render_template('detay.html', mulk=secilen_mulk)
+    sozlesme_bitti_mi = False
+    bitis_tarihi = None
+    
+    # 1. Mülkün içindeki AKTİF sözleşmeyi bul
+    aktif_sozlesme = next((s for s in secilen_mulk.sozlesmeler if s.aktif_mi), None)
+    
+    # 2. Mülkün içindeki GEÇMİŞ (pasif) sözleşmeleri bul ve en yeniden eskiye doğru sırala
+    gecmis_sozlesmeler = [s for s in secilen_mulk.sozlesmeler if not s.aktif_mi]
+    gecmis_sozlesmeler.sort(key=lambda x: x.baslangic_tarihi, reverse=True)
+    
+    if aktif_sozlesme:
+        try:
+            bitis_tarihi = aktif_sozlesme.baslangic_tarihi.replace(year=aktif_sozlesme.baslangic_tarihi.year + 1)
+        except ValueError:
+            bitis_tarihi = aktif_sozlesme.baslangic_tarihi.replace(year=aktif_sozlesme.baslangic_tarihi.year + 1, day=28)
+        
+        if date.today() >= bitis_tarihi:
+            sozlesme_bitti_mi = True
 
+    # Aylar listesini template'e gönderiyoruz ki Jinja içinde kullanabilelim
+    aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+
+    return render_template('detay.html', 
+                           mulk=secilen_mulk, 
+                           aktif_sozlesme=aktif_sozlesme,
+                           gecmis_sozlesmeler=gecmis_sozlesmeler, 
+                           sozlesme_bitti_mi=sozlesme_bitti_mi, 
+                           bitis_tarihi=bitis_tarihi,
+                           aylar=aylar)
+
+@app.route('/sozlesme/<int:id>/yenile', methods=['GET', 'POST'])
+def sozlesme_yenile(id):
+    eski_sozlesme = Sozlesmeler.query.get_or_404(id)
+    mulk = eski_sozlesme.mulk
+    kiraci = eski_sozlesme.kiraci
+    
+    # Eski sözleşmenin bitiş tarihini hesapla (Bu tarih yeni sözleşmenin varsayılan başlangıcı olacak)
+    try:
+        varsayilan_baslangic = eski_sozlesme.baslangic_tarihi.replace(year=eski_sozlesme.baslangic_tarihi.year + 1)
+    except ValueError:
+        varsayilan_baslangic = eski_sozlesme.baslangic_tarihi.replace(year=eski_sozlesme.baslangic_tarihi.year + 1, day=28)
+        
+    if request.method == 'POST':
+        yeni_kira = request.form.get('kira_bedeli')
+        yeni_baslangic_str = request.form.get('baslangic_tarihi')
+        yeni_baslangic = datetime.strptime(yeni_baslangic_str, '%Y-%m-%d').date()
+        
+        
+        eski_sozlesme.aktif_mi = False
+        
+        # 2. Yeni Sözleşmeyi oluştur
+        yeni_sozlesme = Sozlesmeler(
+            mulk_id=mulk.id,
+            kiraci_id=kiraci.id,
+            kira_bedeli=float(yeni_kira),
+            baslangic_tarihi=yeni_baslangic
+        )
+        db.session.add(yeni_sozlesme)
+        db.session.flush() # ID'yi almak için
+        
+        
+        for i in range(12):
+            ay = yeni_baslangic.month - 1 + i
+            yil = yeni_baslangic.year + ay // 12
+            ay = ay % 12 + 1
+            max_gun = calendar.monthrange(yil, ay)[1]
+            gun = min(yeni_baslangic.day, max_gun)
+            
+            odeme_donemi_tarihi = date(yil, ay, gun)
+            yeni_odeme = Odemeler(
+                sozlesme_id=yeni_sozlesme.id,
+                odeme_donemi=odeme_donemi_tarihi,
+                durum='odenmedi'
+            )
+            db.session.add(yeni_odeme)
+            
+        db.session.commit()
+        return redirect(url_for('mulk_detayi', id=mulk.id))
+        
+    return render_template('sozlesme_yenile.html', eski_sozlesme=eski_sozlesme, kiraci=kiraci, varsayilan_baslangic=varsayilan_baslangic)
 @app.route('/mulk/ekle', methods=['GET', 'POST'])
 def mulk_ekle():
     
@@ -154,10 +234,11 @@ def kiraci_ekle(id):
             mulk_id=secilen_mulk.id,
             kiraci_id=yeni_kiraci.id,
             kira_bedeli=float(kira_bedeli),
-            baslangic_tarihi=baslangic_tarihi
+            baslangic_tarihi=baslangic_tarihi,
+            kapora=request.form.get('kapora')
         )
         db.session.add(yeni_sozlesme)
-        db.session.flush() # Sözleşme ID sini almak için tekrar flush yapılır
+        db.session.flush() 
         
         # 3. 12 Ödeme tablosunu otomatik oluşturma döngüsü
         for i in range(12):
@@ -242,6 +323,7 @@ def kiraci_duzenle(id):
         kiraci.soyad = request.form.get('soyad')
         kiraci.telefon = request.form.get('telefon')
         sozlesme.kira_bedeli = float(request.form.get('kira_bedeli'))
+        sozlesme.kapora = request.form.get('kapora')
         
         db.session.commit()
         return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
@@ -279,4 +361,4 @@ def detayli_odeme_yap(id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True) #host='0.0.0.0', port=5000,

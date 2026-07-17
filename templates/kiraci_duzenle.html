@@ -47,6 +47,12 @@
                 <p class="text-xs text-gray-400 mt-2">Not: Kira bedelini değiştirmeniz, geçmişteki 'Ödendi' durumlarını bozmaz ancak bekleyen yeni ayların tutarını günceller.</p>
             </div>
 
+            <!-- Kapora Düzenleme -->
+            <div class="mb-8">
+                <label class="block text-sm text-gray-600 mb-1">Kapora / Depozito <span class="text-gray-400 font-normal">(İsteğe Bağlı)</span></label>
+                <input type="text" name="kapora" value="{{ sozlesme.kapora if sozlesme.kapora != None else '' }}" placeholder="Örn: 2 Kira Bedeli" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
             <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:bg-blue-700 transition">
                 Değişiklikleri Kaydet
             </button>

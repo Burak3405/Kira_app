@@ -66,9 +66,28 @@
                 <div class="flex items-center text-sm mb-1">
                     <i class="fa-solid fa-wallet w-5"></i> Aylık: {{ aktif_sozlesme.kira_bedeli }} ₺
                 </div>
+
+                {% if aktif_sozlesme.kapora %}
+                <div class="flex items-center text-sm mb-1">
+                    <i class="fa-solid fa-shield-halved w-5"></i> Kapora: {{ aktif_sozlesme.kapora }}
+                </div>
+                {% endif %}
+
                 <div class="flex items-center text-sm">
                     <i class="fa-solid fa-calendar-days w-5"></i> Başlangıç: {{ aktif_sozlesme.baslangic_tarihi.strftime('%d.%m.%Y') }}
                 </div>
+                {% if sozlesme_bitti_mi %}
+                <div class="mt-4 bg-red-500 bg-opacity-20 border border-red-300 rounded-lg p-3 flex justify-between items-center relative z-10">
+                    <div>
+                        <span class="block text-white font-bold text-sm"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Sözleşme Doldu</span>
+                        <span class="text-blue-100 text-xs">1 yıl tamamlandı ({{ bitis_tarihi.strftime('%d.%m.%Y') }}).</span>
+                    </div>
+                    <a href="{{ url_for('sozlesme_yenile', id=aktif_sozlesme.id) }}" class="bg-white text-red-600 hover:bg-red-50 text-xs font-bold py-2 px-3 rounded shadow-sm transition shrink-0 ml-2">
+                        Sözleşmeyi Yenile
+                    </a>
+                </div>
+                {% endif %}
+            </div>
             </div>
 
             <h3 class="text-lg font-semibold text-gray-700 mb-3">Ödeme Geçmişi</h3>
@@ -76,6 +95,63 @@
             <!-- Türkçe ay isimleri sözlüğü (Jinja içinde) -->
             {% set aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'] %}
             
+            <!-- GEÇMİŞ SÖZLEŞMELER  -->
+            {% if gecmis_sozlesmeler %}
+            <details class="mb-5 group bg-gray-200 bg-opacity-40 rounded-xl border border-gray-200 overflow-hidden">
+                <summary class="flex justify-between items-center p-3 cursor-pointer font-semibold text-gray-600 text-sm hover:bg-gray-200 transition">
+                    <span><i class="fa-solid fa-box-archive mr-2"></i> Geçmiş Sözleşmeler / Arşiv</span>
+                    <i class="fa-solid fa-chevron-down transition-transform group-open:rotate-180"></i>
+                </summary>
+                
+                <div class="p-4 pt-0 border-t border-gray-200">
+                    <div class="space-y-3 mt-3">
+                        
+                        {% for eski_soz in gecmis_sozlesmeler %}
+                            <details class="group/eski bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                                <summary class="flex justify-between items-center p-3 cursor-pointer text-sm font-semibold bg-gray-50 hover:bg-gray-100 transition">
+                                    <div>
+                                        <span class="text-gray-700"><i class="fa-solid fa-file-signature text-gray-400 mr-1"></i> {{ eski_soz.kiraci.ad }} {{ eski_soz.kiraci.soyad }}</span>
+                                        <span class="text-xs text-gray-500 font-normal ml-2 block sm:inline">Başlangıç: {{ eski_soz.baslangic_tarihi.strftime('%d.%m.%Y') }} | {{ eski_soz.kira_bedeli }} ₺</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down transition-transform group-open/eski:rotate-180 text-gray-400"></i>
+                                </summary>
+                                
+                                <div class="p-3 text-sm text-gray-600 space-y-1 bg-white">
+                                    <!-- O Sözleşmeye Ait Eski Ödemeler -->
+                                    {% for odeme in eski_soz.odemeler|sort(attribute='odeme_donemi') %}
+                                        {% set ay_ismi = aylar[odeme.odeme_donemi.month - 1] %}
+                                        
+                                        <div class="py-2 border-b border-gray-50 last:border-0">
+                                            <!-- Üst Satır: Ay ve Ödeme Durumu -->
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-xs font-medium text-gray-600">{{ ay_ismi }} {{ odeme.odeme_donemi.year }}</span>
+                                                
+                                                {% if odeme.durum == 'odendi' %}
+                                                    <span class="text-xs font-bold text-green-600">Ödendi ({{ odeme.odenen_miktar }} ₺)</span>
+                                                {% elif odeme.durum == 'eksik' %}
+                                                    <span class="text-xs font-bold text-yellow-600">Eksik ({{ odeme.odenen_miktar }} ₺)</span>
+                                                {% else %}
+                                                    <span class="text-xs font-bold text-red-400">Ödenmedi</span>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <!-- Alt Satır: Eğer Açıklama/Not Varsa Göster -->
+                                            {% if odeme.aciklama %}
+                                            <div class="mt-1 text-[11px] text-gray-500 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                                <i class="fa-solid fa-pen text-gray-400 mr-1"></i> <span class="italic">{{ odeme.aciklama }}</span>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                    {% endfor %}
+                                </div>
+                            </details>
+                        {% endfor %}
+                    </div>
+                </div>
+            </details>
+            {% endif %}
+
             <div class="space-y-3">
                 {% for odeme in aktif_sozlesme.odemeler|sort(attribute='odeme_donemi') %}
                     
