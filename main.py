@@ -359,6 +359,37 @@ def detayli_odeme_yap(id):
     db.session.commit()
     return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
 
+@app.route('/odeme/<int:id>/guncelle', methods=['POST'])
+def odeme_guncelle(id):
+    odeme = Odemeler.query.get_or_404(id)
+    
+    # Formdan gelen yeni verileri alıyoruz
+    gelen_miktar = float(request.form.get('odenen_miktar'))
+    gelen_tarih = request.form.get('odeme_tarihi')
+    aciklama = request.form.get('aciklama')
+    
+    # Eğer miktarı 0 girerse, bu ödemeyi tamamen iptal et (Sıfırla)
+    if gelen_miktar == 0:
+        odeme.odenen_miktar = 0
+        odeme.odeme_tarihi = None
+        odeme.aciklama = None
+        odeme.durum = 'odenmedi'
+    else:
+        # Normal güncelleme işlemi
+        odeme.odenen_miktar = gelen_miktar
+        if gelen_tarih:
+            odeme.odeme_tarihi = datetime.strptime(gelen_tarih, '%Y-%m-%d').date()
+        
+        odeme.aciklama = aciklama
+        
+        # Durumu tekrar hesapla (Eksik mi, Tam mı?)
+        if odeme.odenen_miktar >= odeme.sozlesme.kira_bedeli:
+            odeme.durum = 'odendi'
+        else:
+            odeme.durum = 'eksik'
+            
+    db.session.commit()
+    return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
 
 if __name__ == '__main__':
     app.run(debug=True) #host='0.0.0.0', port=5000,
