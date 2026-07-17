@@ -21,12 +21,14 @@
             </div>
         </div>
         
-        <!-- Mülkü Sil Butonu -->
-        <form action="{{ url_for('mulk_sil', id=mulk.id) }}" method="POST" onsubmit="return confirm('Bu mülkü ve ona ait tüm geçmiş ödeme/kiracı kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
-            <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg transition">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-        </form>
+        <!-- Sağ Taraf: Sadece Mülkü Sil Butonu -->
+        <div>
+            <form action="{{ url_for('mulk_sil', id=mulk.id) }}" method="POST" onsubmit="return confirm('Bu mülkü ve ona ait tüm geçmiş ödeme/kiracı kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
+                <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg transition" title="Mülkü Sil">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </form>
+        </div>
     </header>
 
     <main class="p-4">

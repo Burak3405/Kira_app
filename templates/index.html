@@ -9,12 +9,21 @@
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans pb-20">
 
+
     <header class="bg-white shadow-sm px-4 py-4 flex justify-between items-center sticky top-0 z-10">
         <div class="text-xl font-bold text-blue-600">
             <i class="fa-solid fa-house-chimney mr-2"></i>KiraTakibi
         </div>
-        <div class="text-gray-500">
-            <i class="fa-solid fa-user-circle text-2xl"></i>
+        
+        <!-- Sağ Taraf: Kullanıcı Adı ve Çıkış Butonu -->
+        <div class="flex items-center gap-4">
+            <span class="text-gray-600 font-medium text-sm flex items-center gap-1">
+                <i class="fa-solid fa-user-circle text-lg"></i> {{ current_user.kullanici_adi }}
+            </span>
+            
+            <a href="{{ url_for('logout') }}" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-500 hover:text-white transition-colors duration-200 py-1.5 px-3 rounded text-sm font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-right-from-bracket"></i> Çıkış
+            </a>
         </div>
     </header>
 

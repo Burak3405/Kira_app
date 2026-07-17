@@ -1,18 +1,45 @@
 import os
 import calendar
 from datetime import datetime, date
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
 app = Flask(__name__)
 
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' 
+
+@login_manager.user_loader
+def load_user(kullanici_id):
+    return Kullanicilar.query.get(int(kullanici_id))
+
+class Kullanicilar(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    kullanici_adi = db.Column(db.String(50), unique=True, nullable=False)
+    sifre_hash = db.Column(db.String(255), nullable=False)
+    
+    # Kullanıcının mülkleri ve kiracıları ile ilişkisi
+    mulkler = db.relationship('Mulkler', backref='sahip', lazy=True)
+    kiracilar = db.relationship('Kiracilar', backref='sahip', lazy=True)
+
+    def sifre_belirle(self, sifre):
+        self.sifre_hash = generate_password_hash(sifre)
+
+    def sifre_kontrol(self, sifre):
+        return check_password_hash(self.sifre_hash, sifre)
 
 class Mulkler(db.Model):
     __tablename__ = 'mulkler'
@@ -22,6 +49,7 @@ class Mulkler(db.Model):
     adres = db.Column(db.Text)
     olusturulma_tarihi = db.Column(db.DateTime, default=datetime.now)
     
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'), nullable=False)
     sozlesmeler = db.relationship('Sozlesmeler', backref='mulk', lazy=True)
 
 class Kiracilar(db.Model):
@@ -32,6 +60,8 @@ class Kiracilar(db.Model):
     telefon = db.Column(db.String(20))
     olusturulma_tarihi = db.Column(db.DateTime, default=datetime.now)
     
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'), nullable=False)
+
     sozlesmeler = db.relationship('Sozlesmeler', backref='kiraci', lazy=True)
 
 class Sozlesmeler(db.Model):
@@ -61,10 +91,57 @@ class Odemeler(db.Model):
 with app.app_context():
     db.create_all()
 
+# --- AUTH ROTALARI (GİRİŞ / ÇIKIŞ / KAYIT) ---
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        kullanici_adi = request.form.get('kullanici_adi')
+        sifre = request.form.get('sifre')
+        
+        # Kullanıcı zaten var mı kontrolü
+        mevcut_kullanici = Kullanicilar.query.filter_by(kullanici_adi=kullanici_adi).first()
+        if mevcut_kullanici:
+            flash('Bu kullanıcı adı zaten alınmış.', 'error')
+            return redirect(url_for('register'))
+            
+        yeni_kullanici = Kullanicilar(kullanici_adi=kullanici_adi)
+        yeni_kullanici.sifre_belirle(sifre)
+        
+        db.session.add(yeni_kullanici)
+        db.session.commit()
+        
+        flash('Kayıt başarılı! Şimdi giriş yapabilirsiniz.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('register.html') # Bu sayfayı oluşturman gerekecek
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        kullanici_adi = request.form.get('kullanici_adi')
+        sifre = request.form.get('sifre')
+        kullanici = Kullanicilar.query.filter_by(kullanici_adi=kullanici_adi).first()
+        
+        if kullanici and kullanici.sifre_kontrol(sifre):
+            login_user(kullanici)
+            return redirect(url_for('ana_sayfa'))
+        else:
+            flash('Hatalı kullanıcı adı veya şifre!', 'error')
+            
+    return render_template('login.html') # Bu sayfayı oluşturman gerekecek
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 
 @app.route('/')
+@login_required
 def ana_sayfa():
-    tum_mulkler = Mulkler.query.all()
+    tum_mulkler = Mulkler.query.filter_by(kullanici_id=current_user.id).all()
     
     #İSTATİSTİK HESAPLAMA(Ayın Özeti) ---
     bugun = date.today()
@@ -72,7 +149,10 @@ def ana_sayfa():
     tahsil_edilen = 0
     
     # Aktif sözleşmeleri bul
-    aktif_sozlesmeler = Sozlesmeler.query.filter_by(aktif_mi=True).all()
+    aktif_sozlesmeler = Sozlesmeler.query.join(Mulkler).filter(
+        Sozlesmeler.aktif_mi == True, 
+        Mulkler.kullanici_id == current_user.id
+    ).all()
     
     for sozlesme in aktif_sozlesmeler:
         # Bu ayki ödemesini buluyoruz
@@ -108,8 +188,9 @@ def ana_sayfa():
     return render_template('index.html', mulkler_listesi=tum_mulkler, istatistik=istatistik)
 
 @app.route('/mulk/<int:id>')
+@login_required
 def mulk_detayi(id):
-    secilen_mulk = Mulkler.query.get_or_404(id)
+    secilen_mulk = Mulkler.query.filter_by(id=id, kullanici_id=current_user.id).first_or_404()
     
     sozlesme_bitti_mi = False
     bitis_tarihi = None
@@ -142,9 +223,13 @@ def mulk_detayi(id):
                            aylar=aylar)
 
 @app.route('/sozlesme/<int:id>/yenile', methods=['GET', 'POST'])
+@login_required
 def sozlesme_yenile(id):
     eski_sozlesme = Sozlesmeler.query.get_or_404(id)
     mulk = eski_sozlesme.mulk
+    if mulk.kullanici_id != current_user.id:
+        return redirect(url_for('ana_sayfa'))
+    
     kiraci = eski_sozlesme.kiraci
     
     # Eski sözleşmenin bitiş tarihini hesapla (Bu tarih yeni sözleşmenin varsayılan başlangıcı olacak)
@@ -191,7 +276,9 @@ def sozlesme_yenile(id):
         return redirect(url_for('mulk_detayi', id=mulk.id))
         
     return render_template('sozlesme_yenile.html', eski_sozlesme=eski_sozlesme, kiraci=kiraci, varsayilan_baslangic=varsayilan_baslangic)
+
 @app.route('/mulk/ekle', methods=['GET', 'POST'])
+@login_required
 def mulk_ekle():
     
     if request.method == 'POST':
@@ -201,7 +288,7 @@ def mulk_ekle():
         gelen_adres = request.form.get('adres')
         
         
-        yeni_mulk = Mulkler(ad=gelen_ad, tur=gelen_tur, adres=gelen_adres)
+        yeni_mulk = Mulkler(ad=gelen_ad, tur=gelen_tur, adres=gelen_adres, kullanici_id=current_user.id)
         db.session.add(yeni_mulk)
         db.session.commit()
         
@@ -212,8 +299,9 @@ def mulk_ekle():
     return render_template('mulk_ekle.html')
 
 @app.route('/mulk/<int:id>/kiraci_ekle', methods=['GET', 'POST'])
+@login_required
 def kiraci_ekle(id):
-    secilen_mulk = Mulkler.query.get_or_404(id)
+    secilen_mulk = Mulkler.query.filter_by(id=id, kullanici_id=current_user.id).first_or_404()
     
     if request.method == 'POST':
         ad = request.form.get('ad')
@@ -224,12 +312,11 @@ def kiraci_ekle(id):
         
         baslangic_tarihi = datetime.strptime(baslangic_tarihi_str, '%Y-%m-%d').date()
         
-        # 1. Kiracıyı ekle ve ID sini al
-        yeni_kiraci = Kiracilar(ad=ad, soyad=soyad, telefon=telefon)
+        # Kiracıyı, işlemi yapan current_user'a bağla
+        yeni_kiraci = Kiracilar(ad=ad, soyad=soyad, telefon=telefon, kullanici_id=current_user.id)
         db.session.add(yeni_kiraci)
         db.session.flush() 
         
-        # 2. Sözleşmeyi ekle ve ID sini al
         yeni_sozlesme = Sozlesmeler(
             mulk_id=secilen_mulk.id,
             kiraci_id=yeni_kiraci.id,
@@ -240,36 +327,33 @@ def kiraci_ekle(id):
         db.session.add(yeni_sozlesme)
         db.session.flush() 
         
-        # 3. 12 Ödeme tablosunu otomatik oluşturma döngüsü
         for i in range(12):
             ay = baslangic_tarihi.month - 1 + i
             yil = baslangic_tarihi.year + ay // 12
             ay = ay % 12 + 1
-            
-            # Ayın kaç gün çektiğini bulma
             max_gun = calendar.monthrange(yil, ay)[1]
             gun = min(baslangic_tarihi.day, max_gun)
             
             odeme_donemi_tarihi = date(yil, ay, gun)
-            
             yeni_odeme = Odemeler(
                 sozlesme_id=yeni_sozlesme.id,
                 odeme_donemi=odeme_donemi_tarihi,
-                durum='odenmedi' # Varsayılan = ödemedi
+                durum='odenmedi' 
             )
             db.session.add(yeni_odeme)
             
-        # Tüm işlemleri tek seferde veritabanına kaydet
         db.session.commit()
-        
         return redirect(url_for('mulk_detayi', id=secilen_mulk.id))
         
     return render_template('kiraci_ekle.html', mulk=secilen_mulk)
 
 @app.route('/odeme/<int:id>/ode', methods=['POST'])
+@login_required
 def odeme_yap(id):
     # İlgili ödemeyi veritabanından bul
     odeme = Odemeler.query.get_or_404(id)
+    if odeme.sozlesme.mulk.kullanici_id != current_user.id:
+        return redirect(url_for('ana_sayfa'))
     
     odeme.durum = 'odendi'
     
@@ -283,8 +367,9 @@ def odeme_yap(id):
     return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
 
 @app.route('/mulk/<int:id>/sil', methods=['POST'])
+@login_required
 def mulk_sil(id):
-    mulk = Mulkler.query.get_or_404(id)
+    mulk = Mulkler.query.filter_by(id=id, kullanici_id=current_user.id).first_or_404()
     
     # Integrity Error almamak için 
     for sozlesme in mulk.sozlesmeler:
@@ -298,8 +383,11 @@ def mulk_sil(id):
     return redirect(url_for('ana_sayfa'))
 
 @app.route('/sozlesme/<int:id>/bitir', methods=['POST'])
+@login_required
 def sozlesme_bitir(id):
     sozlesme = Sozlesmeler.query.get_or_404(id)
+    if sozlesme.mulk.kullanici_id != current_user.id:
+        return redirect(url_for('ana_sayfa'))
     
     
     sozlesme.aktif_mi = False
@@ -313,8 +401,11 @@ def sozlesme_bitir(id):
     return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
 
 @app.route('/sozlesme/<int:id>/duzenle', methods=['GET', 'POST'])
+@login_required
 def kiraci_duzenle(id):
     sozlesme = Sozlesmeler.query.get_or_404(id)
+    if sozlesme.mulk.kullanici_id != current_user.id:
+        return redirect(url_for('ana_sayfa'))
     kiraci = sozlesme.kiraci
     
     if request.method == 'POST':
@@ -331,8 +422,11 @@ def kiraci_duzenle(id):
     return render_template('kiraci_duzenle.html', sozlesme=sozlesme, kiraci=kiraci)
 
 @app.route('/odeme/<int:id>/detayli_ode', methods=['POST'])
+@login_required
 def detayli_odeme_yap(id):
     odeme = Odemeler.query.get_or_404(id)
+    if odeme.sozlesme.mulk.kullanici_id != current_user.id:
+        return redirect(url_for('ana_sayfa'))
 
     # Formdan gelen verileri alıyoruz
     gelen_miktar = request.form.get('odenen_miktar')
@@ -360,8 +454,11 @@ def detayli_odeme_yap(id):
     return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
 
 @app.route('/odeme/<int:id>/guncelle', methods=['POST'])
+@login_required
 def odeme_guncelle(id):
     odeme = Odemeler.query.get_or_404(id)
+    if odeme.sozlesme.mulk.kullanici_id != current_user.id:
+        return redirect(url_for('ana_sayfa'))
     
     # Formdan gelen yeni verileri alıyoruz
     gelen_miktar = float(request.form.get('odenen_miktar'))
