@@ -10,6 +10,10 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf.csrf import CSRFProtect
+from flask_wtf import FlaskForm
+from wtforms import StringField, FloatField, DateField, SelectField, PasswordField, BooleanField
+from wtforms.validators import DataRequired, Length, NumberRange, Optional, InputRequired
+from werkzeug.exceptions import HTTPException
 
 load_dotenv()
 
@@ -115,6 +119,104 @@ class Odemeler(db.Model):
     durum = db.Column(db.Enum('odendi', 'eksik', 'odenmedi', 'gec_odendi'), default='odenmedi')
     aciklama = db.Column(db.Text)
 
+
+class KayitForm(FlaskForm):
+    kullanici_adi = StringField('Kullanıcı Adı', validators=[
+        DataRequired(message="Kullanıcı adı boş bırakılamaz."),
+        Length(min=3, max=50, message="Kullanıcı adı 3 ile 50 karakter arasında olmalıdır.")
+    ])
+    sifre = PasswordField('Şifre', validators=[
+        DataRequired(message="Şifre boş bırakılamaz."),
+        Length(min=6, max=100, message="Şifre en az 6 karakter olmalıdır.")
+    ])
+
+class GirisForm(FlaskForm):
+    kullanici_adi = StringField('Kullanıcı Adı', validators=[DataRequired(message="Kullanıcı adınızı giriniz.")])
+    sifre = PasswordField('Şifre', validators=[DataRequired(message="Şifrenizi giriniz.")])
+    beni_hatirla = BooleanField('Beni Hatırla')
+
+class KiraciEkleForm(FlaskForm):
+    
+    ad = StringField('Ad', validators=[
+        DataRequired(message="Ad alanı zorunludur."), 
+        Length(min=2, max=50, message="Ad 2 ile 50 karakter arasında olmalıdır.")
+    ])
+    soyad = StringField('Soyad', validators=[
+        DataRequired(message="Soyad alanı zorunludur."), 
+        Length(min=2, max=50, message="Soyad 2 ile 50 karakter arasında olmalıdır.")
+    ])
+    telefon = StringField('Telefon', validators=[
+        Optional(), 
+        Length(max=20, message="Telefon numarası çok uzun.")
+    ])
+    kira_bedeli = FloatField('Kira Bedeli', validators=[
+        DataRequired(message="Geçerli bir kira bedeli giriniz."), 
+        NumberRange(min=0, max=99999999, message="Kira bedeli sistem sınırlarını aşıyor (Min: 0, Maks: 99.999.999).")
+    ])
+    kapora = StringField('Kapora', validators=[
+        Optional(), 
+        Length(max=100)
+    ])
+    baslangic_tarihi = DateField('Başlangıç Tarihi', format='%Y-%m-%d', validators=[
+        DataRequired(message="Geçerli bir tarih formatı giriniz.")
+    ])
+
+class MulkEkleForm(FlaskForm):
+    ad = StringField('Ad', validators=[
+        DataRequired(message="Mülk adı zorunludur."), 
+        Length(max=100, message="Mülk adı çok uzun.")
+    ])
+    tur = SelectField('Tür', choices=[
+        ('Ev (Daire)', 'Ev (Daire)'), 
+        ('Dükkan / İş Yeri', 'Dükkan / İş Yeri'), 
+        ('Ofis', 'Ofis'), 
+        ('Müstakil Ev', 'Müstakil Ev'), 
+        ('Arsa', 'Arsa'), 
+        ('Diğer', 'Diğer')
+    ], validators=[DataRequired(message="Geçerli bir mülk türü seçiniz.")])
+    adres = StringField('Adres', validators=[Optional()])
+
+class SozlesmeYenileForm(FlaskForm):
+    kira_bedeli = FloatField('Yeni Kira Bedeli', validators=[
+        InputRequired(message="Geçerli bir kira bedeli giriniz."), 
+        NumberRange(min=0, message="Kira bedeli eksi olamaz.")
+    ])
+    baslangic_tarihi = DateField('Başlangıç Tarihi', format='%Y-%m-%d', validators=[
+        DataRequired(message="Geçerli bir başlangıç tarihi giriniz.")
+    ])
+
+class OdemeForm(FlaskForm):
+    # Sıfır girilebilmesi (iptal işlemi) için InputRequired kullanılır
+    odenen_miktar = FloatField('Ödenen Miktar', validators=[
+        InputRequired(message="Geçerli bir miktar giriniz."), 
+        NumberRange(min=0, max=99999999, message="Ödeme miktarı sistem sınırlarını aşıyor (Min: 0, Maks: 99.999.999).")
+    ])
+    odeme_tarihi = DateField('Ödeme Tarihi', format='%Y-%m-%d', validators=[Optional()])
+    aciklama = StringField('Açıklama', validators=[Optional(), Length(max=255)])
+
+class KiraciDuzenleForm(FlaskForm):
+    ad = StringField('Ad', validators=[
+        DataRequired(message="Ad alanı zorunludur."),
+        Length(min=2, max=50, message="Ad 2 ile 50 karakter arasında olmalıdır.")
+    ])
+    soyad = StringField('Soyad', validators=[
+        DataRequired(message="Soyad alanı zorunludur."),
+        Length(min=2, max=50, message="Soyad 2 ile 50 karakter arasında olmalıdır.")
+    ])
+    telefon = StringField('Telefon', validators=[
+        Optional(),
+        Length(max=20, message="Telefon numarası çok uzun.")
+    ])
+    kira_bedeli = FloatField('Kira Bedeli', validators=[
+        InputRequired(message="Geçerli bir kira bedeli giriniz."),
+        NumberRange(min=0, max=99999999, message="Kira bedeli sistem sınırlarını aşıyor (Maks: 99.999.999).")
+    ])
+    kapora = StringField('Kapora', validators=[
+        Optional(),
+        Length(max=100, message="Kapora metni çok uzun.")
+    ])
+
+
 with app.app_context():
     db.create_all()
 
@@ -122,48 +224,63 @@ with app.app_context():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    form = KayitForm()
+    
     if request.method == 'POST':
-        kullanici_adi = request.form.get('kullanici_adi')
-        sifre = request.form.get('sifre')
-        
-        # Kullanıcı zaten var mı kontrolü
-        mevcut_kullanici = Kullanicilar.query.filter_by(kullanici_adi=kullanici_adi).first()
-        if mevcut_kullanici:
-            flash('Bu kullanıcı adı zaten alınmış.', 'error')
-            return redirect(url_for('register'))
+        if form.validate_on_submit():
+            kullanici_adi = form.kullanici_adi.data.strip()
+            sifre = form.sifre.data
             
-        yeni_kullanici = Kullanicilar(kullanici_adi=kullanici_adi)
-        yeni_kullanici.sifre_belirle(sifre)
-        
-        db.session.add(yeni_kullanici)
-        db.session.commit()
-        
-        flash('Kayıt başarılı! Şimdi giriş yapabilirsiniz.', 'success')
-        return redirect(url_for('login'))
-        
-    return render_template('register.html') # Bu sayfayı oluşturman gerekecek
+            mevcut_kullanici = Kullanicilar.query.filter_by(kullanici_adi=kullanici_adi).first()
+            if mevcut_kullanici:
+                flash('Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin.', 'error')
+                return redirect(url_for('register'))
+                
+            yeni_kullanici = Kullanicilar(kullanici_adi=kullanici_adi)
+            yeni_kullanici.sifre_belirle(sifre)
+            
+            db.session.add(yeni_kullanici)
+            db.session.commit()
+            
+            flash('Kayıt başarılı! Şimdi giriş yapabilirsiniz.', 'success')
+            return redirect(url_for('login'))
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(error, 'error')
+            
+    return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit("3 per minute", methods=["POST"])
 def login():
+    form = GirisForm()
+    
     if request.method == 'POST':
-        kullanici_adi = request.form.get('kullanici_adi')
-        sifre = request.form.get('sifre')
-        beni_hatirla = request.form.get('beni_hatirla') == 'on'
-        kullanici = Kullanicilar.query.filter_by(kullanici_adi=kullanici_adi).first()
-        
-        if kullanici and kullanici.sifre_kontrol(sifre):
-            login_user(kullanici, remember=beni_hatirla)
+        if form.validate_on_submit():
+            kullanici_adi = form.kullanici_adi.data.strip()
+            sifre = form.sifre.data
+            beni_hatirla = form.beni_hatirla.data
             
-            admin_kullanici = app.config.get('ADMIN_USERNAME')
-            if admin_kullanici and kullanici.kullanici_adi == admin_kullanici.strip():
-                return redirect(url_for('admin_panel'))
-
-            return redirect(url_for('ana_sayfa'))
+            kullanici = Kullanicilar.query.filter_by(kullanici_adi=kullanici_adi).first()
+            
+            if kullanici and kullanici.sifre_kontrol(sifre):
+                login_user(kullanici, remember=beni_hatirla)
+                
+                admin_kullanici = app.config.get('ADMIN_USERNAME')
+                if admin_kullanici and kullanici.kullanici_adi == admin_kullanici.strip(): 
+                    return redirect(url_for('admin_panel'))
+                
+                return redirect(url_for('ana_sayfa'))
+            else:
+                flash('Hatalı kullanıcı adı veya şifre!', 'error')
         else:
-            flash('Hatalı kullanıcı adı veya şifre!', 'error')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(error, 'error')
             
-    return render_template('login.html') 
+    return render_template('login.html')
 
 @app.route('/cerez-politikasi')
 def cerez_politikasi():
@@ -268,71 +385,75 @@ def sozlesme_yenile(id):
         return redirect(url_for('ana_sayfa'))
     
     kiraci = eski_sozlesme.kiraci
+    form = SozlesmeYenileForm()
     
-    # Eski sözleşmenin bitiş tarihini hesapla (Bu tarih yeni sözleşmenin varsayılan başlangıcı olacak)
     try:
         varsayilan_baslangic = eski_sozlesme.baslangic_tarihi.replace(year=eski_sozlesme.baslangic_tarihi.year + 1)
     except ValueError:
         varsayilan_baslangic = eski_sozlesme.baslangic_tarihi.replace(year=eski_sozlesme.baslangic_tarihi.year + 1, day=28)
         
     if request.method == 'POST':
-        yeni_kira = request.form.get('kira_bedeli')
-        yeni_baslangic_str = request.form.get('baslangic_tarihi')
-        yeni_baslangic = datetime.strptime(yeni_baslangic_str, '%Y-%m-%d').date()
-        
-        
-        eski_sozlesme.aktif_mi = False
-        
-        # 2. Yeni Sözleşmeyi oluştur
-        yeni_sozlesme = Sozlesmeler(
-            mulk_id=mulk.id,
-            kiraci_id=kiraci.id,
-            kira_bedeli=float(yeni_kira),
-            baslangic_tarihi=yeni_baslangic
-        )
-        db.session.add(yeni_sozlesme)
-        db.session.flush() # ID'yi almak için
-        
-        
-        for i in range(12):
-            ay = yeni_baslangic.month - 1 + i
-            yil = yeni_baslangic.year + ay // 12
-            ay = ay % 12 + 1
-            max_gun = calendar.monthrange(yil, ay)[1]
-            gun = min(yeni_baslangic.day, max_gun)
+        if form.validate_on_submit():
+            eski_sozlesme.aktif_mi = False
             
-            odeme_donemi_tarihi = date(yil, ay, gun)
-            yeni_odeme = Odemeler(
-                sozlesme_id=yeni_sozlesme.id,
-                odeme_donemi=odeme_donemi_tarihi,
-                durum='odenmedi'
+            yeni_sozlesme = Sozlesmeler(
+                mulk_id=mulk.id,
+                kiraci_id=kiraci.id,
+                kira_bedeli=form.kira_bedeli.data,
+                baslangic_tarihi=form.baslangic_tarihi.data
             )
-            db.session.add(yeni_odeme)
+            db.session.add(yeni_sozlesme)
+            db.session.flush() 
             
-        db.session.commit()
-        return redirect(url_for('mulk_detayi', id=mulk.id))
-        
+            yeni_baslangic = form.baslangic_tarihi.data
+            for i in range(12):
+                ay = yeni_baslangic.month - 1 + i
+                yil = yeni_baslangic.year + ay // 12
+                ay = ay % 12 + 1
+                max_gun = calendar.monthrange(yil, ay)[1]
+                gun = min(yeni_baslangic.day, max_gun)
+                
+                odeme_donemi_tarihi = date(yil, ay, gun)
+                yeni_odeme = Odemeler(
+                    sozlesme_id=yeni_sozlesme.id,
+                    odeme_donemi=odeme_donemi_tarihi,
+                    durum='odenmedi'
+                )
+                db.session.add(yeni_odeme)
+                
+            db.session.commit()
+            flash('Sözleşme başarıyla yenilendi.', 'success')
+            return redirect(url_for('mulk_detayi', id=mulk.id))
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(error, 'error')
+                    
     return render_template('sozlesme_yenile.html', eski_sozlesme=eski_sozlesme, kiraci=kiraci, varsayilan_baslangic=varsayilan_baslangic)
 
 @app.route('/mulk/ekle', methods=['GET', 'POST'])
 @login_required
 def mulk_ekle():
+    form = MulkEkleForm()
     
     if request.method == 'POST':
-        # "name" den verileri çekiyoruz
-        gelen_ad = request.form.get('ad')
-        gelen_tur = request.form.get('tur')
-        gelen_adres = request.form.get('adres')
-        
-        
-        yeni_mulk = Mulkler(ad=gelen_ad, tur=gelen_tur, adres=gelen_adres, kullanici_id=current_user.id)
-        db.session.add(yeni_mulk)
-        db.session.commit()
-        
-        # Kayıt bitince ana sayfaya geri yönlendiriyoruz
-        return redirect(url_for('ana_sayfa'))
-    
-    
+        if form.validate_on_submit():
+            yeni_mulk = Mulkler(
+                ad=form.ad.data.strip(), 
+                tur=form.tur.data, 
+                adres=form.adres.data.strip() if form.adres.data else None, 
+                kullanici_id=current_user.id
+            )
+            db.session.add(yeni_mulk)
+            db.session.commit()
+            
+            flash('Yeni mülk başarıyla eklendi.', 'success')
+            return redirect(url_for('ana_sayfa'))
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(error, 'error')
+                    
     return render_template('mulk_ekle.html')
 
 @app.route('/mulk/<int:id>/kiraci_ekle', methods=['GET', 'POST'])
@@ -340,48 +461,56 @@ def mulk_ekle():
 def kiraci_ekle(id):
     secilen_mulk = Mulkler.query.filter_by(id=id, kullanici_id=current_user.id).first_or_404()
     
+    
+    form = KiraciEkleForm() 
+    
     if request.method == 'POST':
-        ad = request.form.get('ad')
-        soyad = request.form.get('soyad')
-        telefon = request.form.get('telefon')
-        kira_bedeli = request.form.get('kira_bedeli')
-        baslangic_tarihi_str = request.form.get('baslangic_tarihi')
-        
-        baslangic_tarihi = datetime.strptime(baslangic_tarihi_str, '%Y-%m-%d').date()
-        
-        # Kiracıyı, işlemi yapan current_user'a bağla
-        yeni_kiraci = Kiracilar(ad=ad, soyad=soyad, telefon=telefon, kullanici_id=current_user.id)
-        db.session.add(yeni_kiraci)
-        db.session.flush() 
-        
-        yeni_sozlesme = Sozlesmeler(
-            mulk_id=secilen_mulk.id,
-            kiraci_id=yeni_kiraci.id,
-            kira_bedeli=float(kira_bedeli),
-            baslangic_tarihi=baslangic_tarihi,
-            kapora=request.form.get('kapora')
-        )
-        db.session.add(yeni_sozlesme)
-        db.session.flush() 
-        
-        for i in range(12):
-            ay = baslangic_tarihi.month - 1 + i
-            yil = baslangic_tarihi.year + ay // 12
-            ay = ay % 12 + 1
-            max_gun = calendar.monthrange(yil, ay)[1]
-            gun = min(baslangic_tarihi.day, max_gun)
-            
-            odeme_donemi_tarihi = date(yil, ay, gun)
-            yeni_odeme = Odemeler(
-                sozlesme_id=yeni_sozlesme.id,
-                odeme_donemi=odeme_donemi_tarihi,
-                durum='odenmedi' 
+        if form.validate_on_submit():
+            # Veriler form.xyz.data diyerek güvenli ve doğru tipte (Float, Date vb.) alınır
+            yeni_kiraci = Kiracilar(
+                ad=form.ad.data.strip(), 
+                soyad=form.soyad.data.strip(), 
+                telefon=form.telefon.data.strip() if form.telefon.data else None, 
+                kullanici_id=current_user.id
             )
-            db.session.add(yeni_odeme)
+            db.session.add(yeni_kiraci)
+            db.session.flush() 
             
-        db.session.commit()
-        return redirect(url_for('mulk_detayi', id=secilen_mulk.id))
-        
+            yeni_sozlesme = Sozlesmeler(
+                mulk_id=secilen_mulk.id,
+                kiraci_id=yeni_kiraci.id,
+                kira_bedeli=form.kira_bedeli.data, # Doğrudan float olarak gelir
+                baslangic_tarihi=form.baslangic_tarihi.data, # Doğrudan Date objesi olarak gelir
+                kapora=form.kapora.data.strip() if form.kapora.data else None
+            )
+            db.session.add(yeni_sozlesme)
+            db.session.flush() 
+            
+            baslangic_tarihi = form.baslangic_tarihi.data
+            for i in range(12):
+                ay = baslangic_tarihi.month - 1 + i
+                yil = baslangic_tarihi.year + ay // 12
+                ay = ay % 12 + 1
+                max_gun = calendar.monthrange(yil, ay)[1]
+                gun = min(baslangic_tarihi.day, max_gun)
+                
+                odeme_donemi_tarihi = date(yil, ay, gun)
+                yeni_odeme = Odemeler(
+                    sozlesme_id=yeni_sozlesme.id,
+                    odeme_donemi=odeme_donemi_tarihi,
+                    durum='odenmedi' 
+                )
+                db.session.add(yeni_odeme)
+                
+            db.session.commit()
+            flash('Kiracı ve sözleşme başarıyla eklendi.', 'success')
+            return redirect(url_for('mulk_detayi', id=secilen_mulk.id))
+            
+        else:
+            for field_name, errors in form.errors.items():
+                for error in errors:
+                    flash(error, 'error')
+                    
     return render_template('kiraci_ekle.html', mulk=secilen_mulk)
 
 @app.route('/odeme/<int:id>/ode', methods=['POST'])
@@ -437,26 +566,43 @@ def sozlesme_bitir(id):
     db.session.commit()
     return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
 
+
 @app.route('/sozlesme/<int:id>/duzenle', methods=['GET', 'POST'])
 @login_required
 def kiraci_duzenle(id):
     sozlesme = Sozlesmeler.query.get_or_404(id)
     if sozlesme.mulk.kullanici_id != current_user.id:
         return redirect(url_for('ana_sayfa'))
-    kiraci = sozlesme.kiraci
     
+    kiraci = sozlesme.kiraci
+    form = KiraciDuzenleForm()
+    
+    
+    if request.method == 'GET':
+        form.ad.data = kiraci.ad
+        form.soyad.data = kiraci.soyad
+        form.telefon.data = kiraci.telefon
+        form.kira_bedeli.data = sozlesme.kira_bedeli
+        form.kapora.data = sozlesme.kapora
+        
     if request.method == 'POST':
-        
-        kiraci.ad = request.form.get('ad')
-        kiraci.soyad = request.form.get('soyad')
-        kiraci.telefon = request.form.get('telefon')
-        sozlesme.kira_bedeli = float(request.form.get('kira_bedeli'))
-        sozlesme.kapora = request.form.get('kapora')
-        
-        db.session.commit()
-        return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
-        
-    return render_template('kiraci_duzenle.html', sozlesme=sozlesme, kiraci=kiraci)
+        if form.validate_on_submit():
+            kiraci.ad = form.ad.data.strip()
+            kiraci.soyad = form.soyad.data.strip()
+            kiraci.telefon = form.telefon.data.strip() if form.telefon.data else None
+            sozlesme.kira_bedeli = form.kira_bedeli.data
+            sozlesme.kapora = form.kapora.data.strip() if form.kapora.data else None
+            
+            db.session.commit()
+            flash('Bilgiler başarıyla güncellendi.', 'success')
+            return redirect(url_for('mulk_detayi', id=sozlesme.mulk_id))
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(error, 'error')
+                    
+    
+    return render_template('kiraci_duzenle.html', sozlesme=sozlesme, kiraci=kiraci, form=form)
 
 @app.route('/odeme/<int:id>/detayli_ode', methods=['POST'])
 @login_required
@@ -465,29 +611,24 @@ def detayli_odeme_yap(id):
     if odeme.sozlesme.mulk.kullanici_id != current_user.id:
         return redirect(url_for('ana_sayfa'))
 
-    # Formdan gelen verileri alıyoruz
-    gelen_miktar = request.form.get('odenen_miktar')
-    gelen_tarih = request.form.get('odeme_tarihi')
-    aciklama = request.form.get('aciklama')
-    
-    # 1. Ödenen Miktarı ata 
-    odeme.odenen_miktar = float(gelen_miktar)
-    
-    # 2. Tarih girilmemişse bugünü ata
-    if gelen_tarih:
-        odeme.odeme_tarihi = datetime.strptime(gelen_tarih, '%Y-%m-%d').date()
-    else:
-        odeme.odeme_tarihi = date.today()
+    form = OdemeForm()
+    if form.validate_on_submit():
+        odeme.odenen_miktar = form.odenen_miktar.data
+        odeme.odeme_tarihi = form.odeme_tarihi.data if form.odeme_tarihi.data else date.today()
+        odeme.aciklama = form.aciklama.data.strip() if form.aciklama.data else None
         
-    odeme.aciklama = aciklama
-    
-    # 3. Durumu güncelle 
-    if odeme.odenen_miktar >= odeme.sozlesme.kira_bedeli:
-        odeme.durum = 'odendi'
+        if odeme.odenen_miktar >= odeme.sozlesme.kira_bedeli:
+            odeme.durum = 'odendi'
+        else:
+            odeme.durum = 'eksik'
+            
+        db.session.commit()
+        flash('Ödeme detayları kaydedildi.', 'success')
     else:
-        odeme.durum = 'eksik'
-        
-    db.session.commit()
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(error, 'error')
+                
     return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
 
 @app.route('/odeme/<int:id>/guncelle', methods=['POST'])
@@ -497,32 +638,34 @@ def odeme_guncelle(id):
     if odeme.sozlesme.mulk.kullanici_id != current_user.id:
         return redirect(url_for('ana_sayfa'))
     
-    # Formdan gelen yeni verileri alıyoruz
-    gelen_miktar = float(request.form.get('odenen_miktar'))
-    gelen_tarih = request.form.get('odeme_tarihi')
-    aciklama = request.form.get('aciklama')
-    
-    # Eğer miktarı 0 girerse, bu ödemeyi tamamen iptal et (Sıfırla)
-    if gelen_miktar == 0:
-        odeme.odenen_miktar = 0
-        odeme.odeme_tarihi = None
-        odeme.aciklama = None
-        odeme.durum = 'odenmedi'
-    else:
-        # Normal güncelleme işlemi
-        odeme.odenen_miktar = gelen_miktar
-        if gelen_tarih:
-            odeme.odeme_tarihi = datetime.strptime(gelen_tarih, '%Y-%m-%d').date()
+    form = OdemeForm()
+    if form.validate_on_submit():
+        gelen_miktar = form.odenen_miktar.data
         
-        odeme.aciklama = aciklama
-        
-        # Durumu tekrar hesapla (Eksik mi, Tam mı?)
-        if odeme.odenen_miktar >= odeme.sozlesme.kira_bedeli:
-            odeme.durum = 'odendi'
+        if gelen_miktar == 0:
+            odeme.odenen_miktar = 0
+            odeme.odeme_tarihi = None
+            odeme.aciklama = None
+            odeme.durum = 'odenmedi'
+            flash('Ödeme sıfırlanıp iptal edildi.', 'success')
         else:
-            odeme.durum = 'eksik'
+            odeme.odenen_miktar = gelen_miktar
+            if form.odeme_tarihi.data:
+                odeme.odeme_tarihi = form.odeme_tarihi.data
+            odeme.aciklama = form.aciklama.data.strip() if form.aciklama.data else None
             
-    db.session.commit()
+            if odeme.odenen_miktar >= odeme.sozlesme.kira_bedeli:
+                odeme.durum = 'odendi'
+            else:
+                odeme.durum = 'eksik'
+            flash('Ödeme başarıyla güncellendi.', 'success')
+            
+        db.session.commit()
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(error, 'error')
+                
     return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
 
 
@@ -591,5 +734,23 @@ def kullanici_sil(id):
     return redirect(url_for('admin_panel'))
 
 
+@app.errorhandler(Exception)
+def genel_hata_yakalayici(e):
+    if isinstance(e, HTTPException):
+        hata_mesajlari = {
+            400: "Geçersiz istek. Lütfen gönderdiğiniz form verilerini kontrol edin.",
+            401: "Bu sayfayı görüntülemek için giriş yapmalısınız.",
+            403: "Erişim reddedildi. Bu işlemi yapmaya yetkiniz yok.",
+            404: "Aradığınız sayfa bulunamamış veya silinmiş olabilir.",
+            405: "Bu sayfa için kullanılan yöntem geçerli değil."
+        }
+        
+        mesaj = hata_mesajlari.get(e.code, e.description)
+        return render_template('hata.html', hata_kodu=e.code, mesaj=mesaj), e.code
+
+    return render_template('hata.html', hata_kodu=500, mesaj="Beklenmeyen bir hata oluştu"), 500
+
+
+
 if __name__ == '__main__':
-    app.run(debug=True) #host='0.0.0.0', port=5000,
+    app.run(host='0.0.0.0', port=5000, debug=True) #host='0.0.0.0', port=5000,

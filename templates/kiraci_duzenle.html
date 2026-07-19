@@ -18,46 +18,73 @@
     </header>
 
     <main class="p-4 mt-2">
-        <form method="POST" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            
-            <h2 class="text-sm font-bold text-blue-600 mb-4 border-b pb-2">Kiracı Bilgileri</h2>
-            
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Ad *</label>
-                    
-                    <input type="text" name="ad" value="{{ kiraci.ad }}" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Soyad *</label>
-                    <input type="text" name="soyad" value="{{ kiraci.soyad }}" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-            </div>
+        <form action="{{ url_for('kiraci_duzenle', id=sozlesme.id) }}" method="POST">
+    <!-- 1. CSRF Güvenlik Anahtarı (Zorunlu) -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-            <div class="mb-6">
-                <label class="block text-sm text-gray-600 mb-1">Telefon</label>
-                <input type="tel" name="telefon" value="{{ kiraci.telefon }}" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
+    <!-- KİRACI BİLGİLERİ -->
+    <h3 class="text-lg font-bold text-blue-600 mb-4 border-b pb-2">Kiracı Bilgileri</h3>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <!-- AD -->
+        <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="ad">Ad *</label>
+            <!-- value kısmına dikkat: veriyi form.ad.data içinden çekiyoruz -->
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="ad" type="text" name="ad" value="{{ form.ad.data if form.ad.data != None else '' }}" required>
+            <!-- Hata mesajı bloğu -->
+            {% if form.ad.errors %}
+                <p class="text-red-500 text-xs italic mt-2">{{ form.ad.errors[0] }}</p>
+            {% endif %}
+        </div>
 
-            <h2 class="text-sm font-bold text-blue-600 mb-4 border-b pb-2">Sözleşme Bilgileri</h2>
+        <!-- SOYAD -->
+        <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="soyad">Soyad *</label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="soyad" type="text" name="soyad" value="{{ form.soyad.data if form.soyad.data != None else '' }}" required>
+            {% if form.soyad.errors %}
+                <p class="text-red-500 text-xs italic mt-2">{{ form.soyad.errors[0] }}</p>
+            {% endif %}
+        </div>
+    </div>
 
-            <div class="mb-8">
-                <label class="block text-sm text-gray-600 mb-1">Aylık Kira Bedeli (₺) *</label>
-                <input type="number" step="0.01" min="0" name="kira_bedeli" value="{{ sozlesme.kira_bedeli }}" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                <p class="text-xs text-gray-400 mt-2">Not: Kira bedelini değiştirmeniz, geçmişteki 'Ödendi' durumlarını bozmaz ancak bekleyen yeni ayların tutarını günceller.</p>
-            </div>
+    <!-- TELEFON -->
+    <div class="mb-6">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="telefon">Telefon</label>
+        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="telefon" type="text" name="telefon" value="{{ form.telefon.data if form.telefon.data != None else '' }}">
+        {% if form.telefon.errors %}
+            <p class="text-red-500 text-xs italic mt-2">{{ form.telefon.errors[0] }}</p>
+        {% endif %}
+    </div>
 
-            <!-- Kapora Düzenleme -->
-            <div class="mb-8">
-                <label class="block text-sm text-gray-600 mb-1">Kapora / Depozito <span class="text-gray-400 font-normal">(İsteğe Bağlı)</span></label>
-                <input type="text" name="kapora" value="{{ sozlesme.kapora if sozlesme.kapora != None else '' }}" placeholder="Örn: 2 Kira Bedeli" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
+    <!-- SÖZLEŞME BİLGİLERİ -->
+    <h3 class="text-lg font-bold text-blue-600 mb-4 border-b pb-2 mt-8">Sözleşme Bilgileri</h3>
 
-            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:bg-blue-700 transition">
-                Değişiklikleri Kaydet
-            </button>
-        </form>
+    <!-- KİRA BEDELİ -->
+    <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="kira_bedeli">Aylık Kira Bedeli (₺) *</label>
+        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="kira_bedeli" type="number" step="0.01" name="kira_bedeli" value="{{ form.kira_bedeli.data if form.kira_bedeli.data != None else '' }}" required>
+        <p class="text-gray-400 text-xs mt-1">Not: Kira bedelini değiştirmeniz, geçmişteki 'Ödendi' durumlarını bozmaz ancak bekleyen yeni ayların tutarını günceller.</p>
+        {% if form.kira_bedeli.errors %}
+            <p class="text-red-500 text-xs font-bold italic mt-2">{{ form.kira_bedeli.errors[0] }}</p>
+        {% endif %}
+    </div>
+
+    <!-- KAPORA -->
+    <div class="mb-6">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="kapora">Kapora / Depozito (İsteğe Bağlı)</label>
+        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="kapora" type="text" name="kapora" placeholder="Örn: 2 Kira Bedeli" value="{{ form.kapora.data if form.kapora.data != None else '' }}">
+        {% if form.kapora.errors %}
+            <p class="text-red-500 text-xs italic mt-2">{{ form.kapora.errors[0] }}</p>
+        {% endif %}
+    </div>
+
+    <!-- BUTON -->
+    <div class="flex items-center justify-between">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded w-full focus:outline-none focus:shadow-outline transition duration-200" type="submit">
+            Değişiklikleri Kaydet
+        </button>
+    </div>
+</form>
     </main>
 
 </body>
