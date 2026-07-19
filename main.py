@@ -19,13 +19,13 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Proxy arkasında çalışırken gerçek IP'leri yakalamak için middleware ekliyoruz
+# Proxy arkasında çalışırken gerçek IP'leri yakalamak için middleware 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 limiter = Limiter(
     get_remote_address,
     app=app,
-    storage_uri="memory://" # Verileri şimdilik RAM'de tutacak
+    storage_uri="memory://" 
 )
 
 csrf = CSRFProtect(app)
@@ -43,7 +43,7 @@ app.config['ADMIN_USERNAME'] = os.getenv('ADMIN_USERNAME')
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-#.env dosyasından okutarak sadece canlı sunucuda devreye girmesini sağlıyoruz.
+
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
 
 
@@ -186,7 +186,7 @@ class SozlesmeYenileForm(FlaskForm):
     ])
 
 class OdemeForm(FlaskForm):
-    # Sıfır girilebilmesi (iptal işlemi) için InputRequired kullanılır
+    # Sıfır girilebilmesi 
     odenen_miktar = FloatField('Ödenen Miktar', validators=[
         InputRequired(message="Geçerli bir miktar giriniz."), 
         NumberRange(min=0, max=99999999, message="Ödeme miktarı sistem sınırlarını aşıyor (Min: 0, Maks: 99.999.999).")
@@ -301,19 +301,19 @@ def logout():
 def ana_sayfa():
     tum_mulkler = Mulkler.query.filter_by(kullanici_id=current_user.id).all()
     
-    #İSTATİSTİK HESAPLAMA(Ayın Özeti) ---
+    #Ayın Özeti
     bugun = date.today()
     beklenen_toplam = 0
     tahsil_edilen = 0
     
-    # Aktif sözleşmeleri bul
+   
     aktif_sozlesmeler = Sozlesmeler.query.join(Mulkler).filter(
         Sozlesmeler.aktif_mi == True, 
         Mulkler.kullanici_id == current_user.id
     ).all()
     
     for sozlesme in aktif_sozlesmeler:
-        # Bu ayki ödemesini buluyoruz
+        
         for odeme in sozlesme.odemeler:
             if odeme.odeme_donemi.month == bugun.month and odeme.odeme_donemi.year == bugun.year:
                 beklenen_toplam += float(sozlesme.kira_bedeli)
@@ -323,7 +323,7 @@ def ana_sayfa():
                 
                 break 
 
-    # Yüzde
+    
     yuzde = 0
     if beklenen_toplam > 0:
         yuzde = int((tahsil_edilen / beklenen_toplam) * 100)
@@ -369,7 +369,6 @@ def mulk_detayi(id):
         if date.today() >= bitis_tarihi:
             sozlesme_bitti_mi = True
 
-    # Aylar listesini template'e gönderiyoruz ki Jinja içinde kullanabilelim
     aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
 
     return render_template('detay.html', 
@@ -520,7 +519,7 @@ def kiraci_ekle(id):
 @app.route('/odeme/<int:id>/ode', methods=['POST'])
 @login_required
 def odeme_yap(id):
-    # İlgili ödemeyi veritabanından bul
+    # İlgili ödemeyi bul
     odeme = Odemeler.query.get_or_404(id)
     if odeme.sozlesme.mulk.kullanici_id != current_user.id:
         return redirect(url_for('ana_sayfa'))
@@ -533,7 +532,7 @@ def odeme_yap(id):
     
     db.session.commit()
     
-    # İşlem bitince kullanıcının geldiği mülk detay sayfasına geri döndür
+    
     return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
 
 @app.route('/mulk/<int:id>/sil', methods=['POST'])
@@ -697,7 +696,6 @@ def admin_panel():
     toplam_mulk = Mulkler.query.count()
     toplam_kiraci = Kiracilar.query.count()
     
-    # MySQL Veritabanı boyutunu hesaplama (MB cinsinden)
     try:
         
         sorgu = db.text("SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) FROM information_schema.TABLES WHERE table_schema = DATABASE()")
@@ -724,8 +722,7 @@ def kullanici_sil(id):
         
     silinecek_kullanici = Kullanicilar.query.get_or_404(id)
     
-    # Cascade (Zincirleme) Silme İşlemi: Kullanıcıya bağlı her şeyi temizle
-    # 1. Mülkleri, Sözleşmeleri ve Ödemeleri sil
+    # Kullanıcıya bağlı her şeyi temizle
     for mulk in silinecek_kullanici.mulkler:
         for sozlesme in mulk.sozlesmeler:
             for odeme in sozlesme.odemeler:
@@ -737,7 +734,7 @@ def kullanici_sil(id):
     for kiraci in silinecek_kullanici.kiracilar:
         db.session.delete(kiraci)
         
-    # 3. Son olarak kullanıcıyı sil
+    # 3.kullanıcıyı sil
     kullanici_adi_yedek = silinecek_kullanici.kullanici_adi
     db.session.delete(silinecek_kullanici)
     db.session.commit()
