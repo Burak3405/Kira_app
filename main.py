@@ -286,6 +286,10 @@ def login():
 def cerez_politikasi():
     return render_template('cerez_politikasi.html')
 
+@app.route('/gizlilik')
+def gizlilik_politikasi():
+    return render_template('gizlilik.html')
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -537,13 +541,21 @@ def odeme_yap(id):
 def mulk_sil(id):
     mulk = Mulkler.query.filter_by(id=id, kullanici_id=current_user.id).first_or_404()
     
-    # Integrity Error almamak için 
+    silinecek_kiracilar = set()
+    
     for sozlesme in mulk.sozlesmeler:
+        if sozlesme.kiraci:
+            silinecek_kiracilar.add(sozlesme.kiraci)
+            
         for odeme in sozlesme.odemeler:
             db.session.delete(odeme) 
         db.session.delete(sozlesme)  
         
     db.session.delete(mulk) 
+    
+    for kiraci in silinecek_kiracilar:
+        db.session.delete(kiraci)
+        
     db.session.commit()
     
     return redirect(url_for('ana_sayfa'))
@@ -753,4 +765,5 @@ def genel_hata_yakalayici(e):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) #host='0.0.0.0', port=5000,
+    app.run(debug=False) 
+

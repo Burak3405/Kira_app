@@ -1,316 +1,280 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mülk Detayı</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-50 text-gray-800 font-sans pb-10">
+{% extends 'base.html' %}
 
-    <header class="bg-white shadow-sm px-4 py-4 flex justify-between items-center sticky top-0 z-10">
-        <div class="flex items-center">
-            <a href="/" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
-            <div>
-                <h1 class="text-lg font-bold text-gray-800">{{ mulk.ad }}</h1>
-                <!-- Adres varsa ekrana bas -->
-                {% if mulk.adres %}
-                <p class="text-xs text-gray-500 mt-1 line-clamp-1"><i class="fa-solid fa-location-dot mr-1"></i>{{ mulk.adres }}</p>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Sağ Taraf: Sadece Mülkü Sil Butonu -->
+{% block title %}{{ mulk.ad }} - Detay{% endblock %}
+
+{% block header %}
+<header class="bg-white shadow-sm px-4 py-4 flex justify-between items-center sticky top-0 z-10 max-w-5xl mx-auto w-full">
+    <div class="flex items-center">
+        <a href="/" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
         <div>
-            <form action="{{ url_for('mulk_sil', id=mulk.id) }}" method="POST" onsubmit="return confirm('Bu mülkü ve ona ait tüm geçmiş ödeme/kiracı kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg transition" title="Mülkü Sil">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </form>
+            <h1 class="text-lg font-bold text-gray-800">{{ mulk.ad }}</h1>
+            {% if mulk.adres %}
+            <p class="text-xs text-gray-500 mt-1 line-clamp-1"><i class="fa-solid fa-location-dot mr-1"></i>{{ mulk.adres }}</p>
+            {% endif %}
         </div>
-    </header>
+    </div>
+    
+    <div>
+        <form action="{{ url_for('mulk_sil', id=mulk.id) }}" method="POST" onsubmit="return confirm('Bu mülkü ve ona ait tüm geçmiş ödeme/kiracı kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg transition" title="Mülkü Sil">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </form>
+    </div>
+</header>
+{% endblock %}
 
-    <main class="p-4">
+{% block content %}
+<main class="p-4 max-w-5xl mx-auto">
+    {% set aktif_sozlesme = mulk.sozlesmeler | selectattr("aktif_mi", "equalto", true) | first %}
+    
+    {% if aktif_sozlesme %}
         
-        {% set aktif_sozlesme = mulk.sozlesmeler | selectattr("aktif_mi", "equalto", true) | first %}
-        
-        {% if aktif_sozlesme %}
+        <div class="bg-blue-600 text-white rounded-xl p-5 shadow-md mb-6 relative overflow-hidden">
+            <i class="fa-solid fa-file-signature absolute -right-4 -bottom-4 text-7xl text-blue-500 opacity-30"></i>
             
-            <div class="bg-blue-600 text-white rounded-xl p-5 shadow-md mb-6 relative overflow-hidden">
-                <i class="fa-solid fa-file-signature absolute -right-4 -bottom-4 text-7xl text-blue-500 opacity-30"></i>
-                
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h2 class="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-1">Kiracı Bilgileri</h2>
-                        <p class="text-xl font-bold mb-2">{{ aktif_sozlesme.kiraci.ad }} {{ aktif_sozlesme.kiraci.soyad }}</p>
-                    </div>
-                    
-                    <!-- Butonlar Grubu -->
-                    <div class="flex items-center space-x-2 z-10 relative">
-                        <!-- Düzenle Butonu -->
-                        <a href="{{ url_for('kiraci_duzenle', id=aktif_sozlesme.id) }}" class="bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
-                            <i class="fa-solid fa-pen"></i> Düzenle
-                        </a>
-                        
-                        <!-- Kiracıyı Çıkar / Sözleşmeyi Bitir Butonu -->
-                        <form action="{{ url_for('sozlesme_bitir', id=aktif_sozlesme.id) }}" method="POST" onsubmit="return confirm('Kiracıyı çıkarmak istediğinize emin misiniz? Bu işlem mülkü boşa çıkartır ve yeni kiracı eklemenize olanak tanır.');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
-                                <i class="fa-solid fa-user-xmark mr-1"></i> Kiracıyı Çıkar
-                            </button>
-                        </form>
-                    </div>
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-1">Kiracı Bilgileri</h2>
+                    <p class="text-xl font-bold mb-2">{{ aktif_sozlesme.kiraci.ad }} {{ aktif_sozlesme.kiraci.soyad }}</p>
                 </div>
                 
-                <div class="flex items-center text-sm mb-1 mt-2">
-                    <i class="fa-solid fa-phone w-5"></i> {{ aktif_sozlesme.kiraci.telefon }}
-                </div>
-                <div class="flex items-center text-sm mb-1">
-                    <i class="fa-solid fa-wallet w-5"></i> Aylık: {{ aktif_sozlesme.kira_bedeli }} ₺
-                </div>
-
-                {% if aktif_sozlesme.kapora %}
-                <div class="flex items-center text-sm mb-1">
-                    <i class="fa-solid fa-shield-halved w-5"></i> Kapora: {{ aktif_sozlesme.kapora }}
-                </div>
-                {% endif %}
-
-                <div class="flex items-center text-sm">
-                    <i class="fa-solid fa-calendar-days w-5"></i> Başlangıç: {{ aktif_sozlesme.baslangic_tarihi.strftime('%d.%m.%Y') }}
-                </div>
-                {% if sozlesme_bitti_mi %}
-                <div class="mt-4 bg-red-500 bg-opacity-20 border border-red-300 rounded-lg p-3 flex justify-between items-center relative z-10">
-                    <div>
-                        <span class="block text-white font-bold text-sm"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Sözleşme Doldu</span>
-                        <span class="text-blue-100 text-xs">1 yıl tamamlandı ({{ bitis_tarihi.strftime('%d.%m.%Y') }}).</span>
-                    </div>
-                    <a href="{{ url_for('sozlesme_yenile', id=aktif_sozlesme.id) }}" class="bg-white text-red-600 hover:bg-red-50 text-xs font-bold py-2 px-3 rounded shadow-sm transition shrink-0 ml-2">
-                        Sözleşmeyi Yenile
+                <div class="flex items-center space-x-2 z-10 relative">
+                    <a href="{{ url_for('kiraci_duzenle', id=aktif_sozlesme.id) }}" class="bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                        <i class="fa-solid fa-pen"></i> Düzenle
                     </a>
+                    
+                    <form action="{{ url_for('sozlesme_bitir', id=aktif_sozlesme.id) }}" method="POST" onsubmit="return confirm('Kiracıyı çıkarmak istediğinize emin misiniz? Bu işlem mülkü boşa çıkartır ve yeni kiracı eklemenize olanak tanır.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                            <i class="fa-solid fa-user-xmark mr-1"></i> Çıkar
+                        </button>
+                    </form>
                 </div>
-                {% endif %}
             </div>
+            
+            <div class="flex items-center text-sm mb-1 mt-2">
+                <i class="fa-solid fa-phone w-5"></i> {{ aktif_sozlesme.kiraci.telefon }}
+            </div>
+            <div class="flex items-center text-sm mb-1">
+                <i class="fa-solid fa-wallet w-5"></i> Aylık: {{ aktif_sozlesme.kira_bedeli }} ₺
             </div>
 
-            <h3 class="text-lg font-semibold text-gray-700 mb-3">Ödeme Geçmişi</h3>
-            
-            <!-- Türkçe ay isimleri sözlüğü (Jinja içinde) -->
-            {% set aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'] %}
-            
-            <!-- GEÇMİŞ SÖZLEŞMELER  -->
-            {% if gecmis_sozlesmeler %}
-            <details class="mb-5 group bg-gray-200 bg-opacity-40 rounded-xl border border-gray-200 overflow-hidden">
-                <summary class="flex justify-between items-center p-3 cursor-pointer font-semibold text-gray-600 text-sm hover:bg-gray-200 transition">
-                    <span><i class="fa-solid fa-box-archive mr-2"></i> Geçmiş Sözleşmeler / Arşiv</span>
-                    <i class="fa-solid fa-chevron-down transition-transform group-open:rotate-180"></i>
-                </summary>
-                
-                <div class="p-4 pt-0 border-t border-gray-200">
-                    <div class="space-y-3 mt-3">
-                        
-                        {% for eski_soz in gecmis_sozlesmeler %}
-                            <details class="group/eski bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-                                <summary class="flex justify-between items-center p-3 cursor-pointer text-sm font-semibold bg-gray-50 hover:bg-gray-100 transition">
-                                    <div>
-                                        <span class="text-gray-700"><i class="fa-solid fa-file-signature text-gray-400 mr-1"></i> {{ eski_soz.kiraci.ad }} {{ eski_soz.kiraci.soyad }}</span>
-                                        <span class="text-xs text-gray-500 font-normal ml-2 block sm:inline">Başlangıç: {{ eski_soz.baslangic_tarihi.strftime('%d.%m.%Y') }} | {{ eski_soz.kira_bedeli }} ₺</span>
-                                    </div>
-                                    <i class="fa-solid fa-chevron-down transition-transform group-open/eski:rotate-180 text-gray-400"></i>
-                                </summary>
-                                
-                                <div class="p-3 text-sm text-gray-600 space-y-1 bg-white">
-                                    <!-- O Sözleşmeye Ait Eski Ödemeler -->
-                                    {% for odeme in eski_soz.odemeler|sort(attribute='odeme_donemi') %}
-                                        {% set ay_ismi = aylar[odeme.odeme_donemi.month - 1] %}
-                                        
-                                        <div class="py-2 border-b border-gray-50 last:border-0">
-                                            <!-- Üst Satır: Ay ve Ödeme Durumu -->
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-xs font-medium text-gray-600">{{ ay_ismi }} {{ odeme.odeme_donemi.year }}</span>
-                                                
-                                                {% if odeme.durum == 'odendi' %}
-                                                    <span class="text-xs font-bold text-green-600">Ödendi ({{ odeme.odenen_miktar }} ₺)</span>
-                                                {% elif odeme.durum == 'eksik' %}
-                                                    <span class="text-xs font-bold text-yellow-600">Eksik ({{ odeme.odenen_miktar }} ₺)</span>
-                                                {% else %}
-                                                    <span class="text-xs font-bold text-red-400">Ödenmedi</span>
-                                                {% endif %}
-                                            </div>
-                                            
-                                            <!-- Alt Satır: Eğer Açıklama/Not Varsa Göster -->
-                                            {% if odeme.aciklama %}
-                                            <div class="mt-1 text-[11px] text-gray-500 bg-gray-50 p-1.5 rounded border border-gray-100">
-                                                <i class="fa-solid fa-pen text-gray-400 mr-1"></i> <span class="italic">{{ odeme.aciklama }}</span>
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                        
-                                    {% endfor %}
-                                </div>
-                            </details>
-                        {% endfor %}
-                    </div>
-                </div>
-            </details>
+            {% if aktif_sozlesme.kapora %}
+            <div class="flex items-center text-sm mb-1">
+                <i class="fa-solid fa-shield-halved w-5"></i> Kapora: {{ aktif_sozlesme.kapora }}
+            </div>
             {% endif %}
 
-            <div class="space-y-3">
-                {% for odeme in aktif_sozlesme.odemeler|sort(attribute='odeme_donemi') %}
-                    
-                    {% set ay_ismi = aylar[odeme.odeme_donemi.month - 1] %}
-                    {% set yil = odeme.odeme_donemi.year %}
-                    
-                    {% if odeme.durum == 'odendi' %}
-                        {% set renk = 'green' %}
-                        {% set durum_yazi = 'Ödendi' %}
-                    {% elif odeme.durum == 'odenmedi' %}
-                        {% set renk = 'red' %}
-                        {% set durum_yazi = 'Ödenmedi' %}
-                    {% else %}
-                        <!-- Eksik ödeme durumu için sarı renk ataması -->
-                        {% set renk = 'yellow' %}
-                        {% set durum_yazi = 'Eksik Ödeme' %}
-                    {% endif %}
+            <div class="flex items-center text-sm">
+                <i class="fa-solid fa-calendar-days w-5"></i> Başlangıç: {{ aktif_sozlesme.baslangic_tarihi.strftime('%d.%m.%Y') }}
+            </div>
+            {% if sozlesme_bitti_mi %}
+            <div class="mt-4 bg-red-500 bg-opacity-20 border border-red-300 rounded-lg p-3 flex justify-between items-center relative z-10">
+                <div>
+                    <span class="block text-white font-bold text-sm"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Sözleşme Doldu</span>
+                    <span class="text-blue-100 text-xs">1 yıl tamamlandı ({{ bitis_tarihi.strftime('%d.%m.%Y') }}).</span>
+                </div>
+                <a href="{{ url_for('sozlesme_yenile', id=aktif_sozlesme.id) }}" class="bg-white text-red-600 hover:bg-red-50 text-xs font-bold py-2 px-3 rounded shadow-sm transition shrink-0 ml-2">
+                    Sözleşmeyi Yenile
+                </a>
+            </div>
+            {% endif %}
+        </div>
 
-                    <!-- Accordion Kartı -->
-                    <details class="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <summary class="flex justify-between items-center p-4 cursor-pointer font-semibold">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-{{ renk }}-500 mr-3"></div>
-                                {{ ay_ismi }} {{ yil }}
-                            </div>
-                            <div class="flex items-center text-sm text-gray-500">
-                                <span class="mr-3 text-{{ renk }}-600 font-bold">{{ durum_yazi }}</span>
-                                <i class="fa-solid fa-chevron-down transition-transform group-open:rotate-180"></i>
-                            </div>
-                        </summary>
-                        
-                        <div class="p-4 pt-0 border-t border-gray-100 bg-gray-50 mt-2 text-sm text-gray-600">
-                            
-                            <!-- ÖDENDİ VEYA EKSİK ÖDENDİ İSE DETAYLARI GÖSTER -->
-                            {% if odeme.durum == 'odendi' or odeme.durum == 'eksik' %}
-                                <div class="grid grid-cols-2 gap-2 mt-3">
-                                    <div><span class="font-semibold block">Ödenen Tutar:</span> {{ odeme.odenen_miktar }} ₺</div>
-                                    <div><span class="font-semibold block">Ödeme Tarihi:</span> {{ odeme.odeme_tarihi.strftime('%d.%m.%Y') if odeme.odeme_tarihi else '-' }}</div>
-                                
-                                    {% if odeme.durum == 'eksik' %}
-                                    <div class="col-span-2 mt-2 bg-yellow-50 text-yellow-700 p-3 rounded-lg border border-yellow-200 text-xs">
-                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Beklenen kiradan <strong>{{ aktif_sozlesme.kira_bedeli - odeme.odenen_miktar }} ₺</strong> eksik yatırıldı.
-                                    </div>
-                                    {% endif %}
-
-                                    {% if odeme.aciklama %}
-                                        <div class="col-span-2 mt-2"><span class="font-semibold block">Not:</span> {{ odeme.aciklama }}</div>
-                                    {% endif %}
+        <h3 class="text-lg font-semibold text-gray-700 mb-3">Ödeme Geçmişi</h3>
+        
+        <!-- GEÇMİŞ SÖZLEŞMELER  -->
+        {% if gecmis_sozlesmeler %}
+        <details class="mb-5 group bg-gray-200 bg-opacity-40 rounded-xl border border-gray-200 overflow-hidden">
+            <summary class="flex justify-between items-center p-3 cursor-pointer font-semibold text-gray-600 text-sm hover:bg-gray-200 transition">
+                <span><i class="fa-solid fa-box-archive mr-2"></i> Geçmiş Sözleşmeler / Arşiv</span>
+                <i class="fa-solid fa-chevron-down transition-transform group-open:rotate-180"></i>
+            </summary>
+            
+            <div class="p-4 pt-0 border-t border-gray-200">
+                <div class="space-y-3 mt-3">
+                    {% for eski_soz in gecmis_sozlesmeler %}
+                        <details class="group/eski bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                            <summary class="flex justify-between items-center p-3 cursor-pointer text-sm font-semibold bg-gray-50 hover:bg-gray-100 transition">
+                                <div>
+                                    <span class="text-gray-700"><i class="fa-solid fa-file-signature text-gray-400 mr-1"></i> {{ eski_soz.kiraci.ad }} {{ eski_soz.kiraci.soyad }}</span>
+                                    <span class="text-xs text-gray-500 font-normal ml-2 block sm:inline">Başlangıç: {{ eski_soz.baslangic_tarihi.strftime('%d.%m.%Y') }} | {{ eski_soz.kira_bedeli }} ₺</span>
                                 </div>
-                                <!-- DÜZENLEME FORMU  -->
-                                <details class="mt-4 group/edit">
-                                    <summary class="text-xs text-blue-600 font-semibold cursor-pointer hover:underline list-none flex items-center inline-block">
-                                        <i class="fa-solid fa-pen mr-1"></i> Bu Ödemeyi Düzenle
+                                <i class="fa-solid fa-chevron-down transition-transform group-open/eski:rotate-180 text-gray-400"></i>
+                            </summary>
+                            
+                            <div class="p-3 text-sm text-gray-600 space-y-1 bg-white">
+                                {% for odeme in eski_soz.odemeler|sort(attribute='odeme_donemi') %}
+                                    {% set ay_ismi = aylar[odeme.odeme_donemi.month - 1] %}
+                                    <div class="py-2 border-b border-gray-50 last:border-0">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs font-medium text-gray-600">{{ ay_ismi }} {{ odeme.odeme_donemi.year }}</span>
+                                            {% if odeme.durum == 'odendi' %}
+                                                <span class="text-xs font-bold text-green-600">Ödendi ({{ odeme.odenen_miktar }} ₺)</span>
+                                            {% elif odeme.durum == 'eksik' %}
+                                                <span class="text-xs font-bold text-yellow-600">Eksik ({{ odeme.odenen_miktar }} ₺)</span>
+                                            {% else %}
+                                                <span class="text-xs font-bold text-red-400">Ödenmedi</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if odeme.aciklama %}
+                                        <div class="mt-1 text-[11px] text-gray-500 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                            <i class="fa-solid fa-pen text-gray-400 mr-1"></i> <span class="italic">{{ odeme.aciklama }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endfor %}
+                </div>
+            </div>
+        </details>
+        {% endif %}
+
+        <div class="space-y-3">
+            {% for odeme in aktif_sozlesme.odemeler|sort(attribute='odeme_donemi') %}
+                {% set ay_ismi = aylar[odeme.odeme_donemi.month - 1] %}
+                {% set yil = odeme.odeme_donemi.year %}
+                
+                {% if odeme.durum == 'odendi' %}
+                    {% set renk = 'green' %}
+                    {% set durum_yazi = 'Ödendi' %}
+                {% elif odeme.durum == 'odenmedi' %}
+                    {% set renk = 'red' %}
+                    {% set durum_yazi = 'Ödenmedi' %}
+                {% else %}
+                    {% set renk = 'yellow' %}
+                    {% set durum_yazi = 'Eksik Ödeme' %}
+                {% endif %}
+
+                <!-- Accordion Kartı -->
+                <details class="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <summary class="flex justify-between items-center p-4 cursor-pointer font-semibold">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-{{ renk }}-500 mr-3"></div>
+                            {{ ay_ismi }} {{ yil }}
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <span class="mr-3 text-{{ renk }}-600 font-bold">{{ durum_yazi }}</span>
+                            <i class="fa-solid fa-chevron-down transition-transform group-open:rotate-180"></i>
+                        </div>
+                    </summary>
+                    
+                    <div class="p-4 pt-0 border-t border-gray-100 bg-gray-50 mt-2 text-sm text-gray-600">
+                        {% if odeme.durum == 'odendi' or odeme.durum == 'eksik' %}
+                            <div class="grid grid-cols-2 gap-2 mt-3">
+                                <div><span class="font-semibold block">Ödenen Tutar:</span> {{ odeme.odenen_miktar }} ₺</div>
+                                <div><span class="font-semibold block">Ödeme Tarihi:</span> {{ odeme.odeme_tarihi.strftime('%d.%m.%Y') if odeme.odeme_tarihi else '-' }}</div>
+                            
+                                {% if odeme.durum == 'eksik' %}
+                                <div class="col-span-2 mt-2 bg-yellow-50 text-yellow-700 p-3 rounded-lg border border-yellow-200 text-xs">
+                                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> Beklenen kiradan <strong>{{ aktif_sozlesme.kira_bedeli - odeme.odenen_miktar }} ₺</strong> eksik yatırıldı.
+                                </div>
+                                {% endif %}
+
+                                {% if odeme.aciklama %}
+                                    <div class="col-span-2 mt-2"><span class="font-semibold block">Not:</span> {{ odeme.aciklama }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <details class="mt-4 group/edit">
+                                <summary class="text-xs text-blue-600 font-semibold cursor-pointer hover:underline list-none flex items-center inline-block">
+                                    <i class="fa-solid fa-pen mr-1"></i> Bu Ödemeyi Düzenle
+                                </summary>
+                                
+                                <form action="{{ url_for('odeme_guncelle', id=odeme.id) }}" method="POST" class="mt-3 bg-white p-4 rounded-lg border border-blue-100 shadow-inner">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    
+                                    <div class="mb-3">
+                                        <label class="block text-xs text-gray-600 mb-1 font-semibold">Ödenen Miktar (₺) *</label>
+                                        <input type="number" step="0.01" min="0" name="odenen_miktar" value="{{ odeme.odenen_miktar }}" required 
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                                        <p class="text-[10px] text-gray-400 mt-1">İpucu: Ödemeyi tamamen iptal etmek için tutarı 0 yapın.</p>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="block text-xs text-gray-600 mb-1 font-semibold">Ödeme Tarihi</label>
+                                        <input type="date" name="odeme_tarihi" value="{{ odeme.odeme_tarihi.strftime('%Y-%m-%d') if odeme.odeme_tarihi else '' }}" required 
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="block text-xs text-gray-600 mb-1 font-semibold">Açıklama / Not</label>
+                                        <input type="text" name="aciklama" value="{{ odeme.aciklama if odeme.aciklama else '' }}" 
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                                    </div>
+
+                                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md transition">
+                                        Değişiklikleri Kaydet
+                                    </button>
+                                </form>
+                            </details>
+
+                        {% else %}
+                            <div class="mt-3">
+                                <span class="font-semibold block">Beklenen Tutar:</span> {{ aktif_sozlesme.kira_bedeli }} ₺
+                                
+                                <form action="{{ url_for('odeme_yap', id=odeme.id) }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="mt-3 w-full bg-green-100 text-green-700 py-2 rounded-lg font-semibold border border-green-200 hover:bg-green-200 hover:shadow-sm transition">
+                                        Ödendi Olarak İşaretle
+                                    </button>
+                                </form>
+
+                                <details class="mt-3 group/detay">
+                                    <summary class="text-sm text-blue-600 font-semibold cursor-pointer text-center hover:underline list-none">
+                                        Farklı Tutar veya Not Ekle <i class="fa-solid fa-caret-down ml-1"></i>
                                     </summary>
                                     
-                                    <form action="{{ url_for('odeme_guncelle', id=odeme.id) }}" method="POST" class="mt-3 bg-white p-4 rounded-lg border border-blue-100 shadow-inner">
+                                    <form action="{{ url_for('detayli_odeme_yap', id=odeme.id) }}" method="POST" class="mt-3 bg-white p-4 rounded-lg border border-blue-100 shadow-inner">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         
                                         <div class="mb-3">
                                             <label class="block text-xs text-gray-600 mb-1 font-semibold">Ödenen Miktar (₺) *</label>
-                                            <input type="number" step="0.01" min="0" name="odenen_miktar" value="{{ odeme.odenen_miktar }}" required 
+                                            <input type="number" step="0.01" min="0" max="99999999" name="odenen_miktar" required placeholder="Örn: 10000" 
                                                 class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
-                                            <p class="text-[10px] text-gray-400 mt-1">İpucu: Ödemeyi tamamen iptal etmek için tutarı 0 yapın.</p>
                                         </div>
 
                                         <div class="mb-3">
-                                            <label class="block text-xs text-gray-600 mb-1 font-semibold">Ödeme Tarihi</label>
-                                            <input type="date" name="odeme_tarihi" value="{{ odeme.odeme_tarihi.strftime('%Y-%m-%d') if odeme.odeme_tarihi else '' }}" required 
+                                            <label class="block text-xs text-gray-600 mb-1 font-semibold">Ödeme Tarihi <span class="font-normal text-gray-400">(Boş bırakılırsa bugün)</span></label>
+                                            <input type="date" name="odeme_tarihi" 
                                                 class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
                                         </div>
 
                                         <div class="mb-4">
                                             <label class="block text-xs text-gray-600 mb-1 font-semibold">Açıklama / Not</label>
-                                            <input type="text" name="aciklama" value="{{ odeme.aciklama if odeme.aciklama else '' }}" 
+                                            <input type="text" name="aciklama" placeholder="Örn: Evden düşülen tesisat masrafı" 
                                                 class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
                                         </div>
 
                                         <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md transition">
-                                            Değişiklikleri Kaydet
+                                            Ödemeyi Kaydet
                                         </button>
                                     </form>
                                 </details>
 
-                            <!-- HİÇ ÖDENMEDİ İSE ÖDEME FORMUNU GÖSTER -->
-                            {% else %}
-                                <div class="mt-3">
-                                    <span class="font-semibold block">Beklenen Tutar:</span> {{ aktif_sozlesme.kira_bedeli }} ₺
-                                    
-                                    <!-- HIZLI ÖDEME BUTONU -->
-                                    <form action="{{ url_for('odeme_yap', id=odeme.id) }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="mt-3 w-full bg-green-100 text-green-700 py-2 rounded-lg font-semibold border border-green-200 hover:bg-green-200 hover:shadow-sm transition">
-                                            Ödendi Olarak İşaretle
-                                        </button>
-                                    </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </details>
+            {% endfor %}
+        </div>
 
-                                    <!-- DETAYLI / KISMİ ÖDEME FORMU -->
-                                    <details class="mt-3 group/detay">
-                                        <summary class="text-sm text-blue-600 font-semibold cursor-pointer text-center hover:underline list-none">
-                                            Farklı Tutar veya Not Ekle <i class="fa-solid fa-caret-down ml-1"></i>
-                                        </summary>
-                                        
-                                        <form action="{{ url_for('detayli_odeme_yap', id=odeme.id) }}" method="POST" class="mt-3 bg-white p-4 rounded-lg border border-blue-100 shadow-inner">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                            
-                                            <!-- Ödenen Miktar (Zorunlu) -->
-                                            <div class="mb-3">
-                                                <label class="block text-xs text-gray-600 mb-1 font-semibold">Ödenen Miktar (₺) *</label>
-                                                <input type="number" step="0.01" min="0" max="99999999" name="odenen_miktar" required placeholder="Örn: 10000" 
-                                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
-                                            </div>
-
-                                            <!-- Ödeme Tarihi (İsteğe Bağlı) -->
-                                            <div class="mb-3">
-                                                <label class="block text-xs text-gray-600 mb-1 font-semibold">Ödeme Tarihi <span class="font-normal text-gray-400">(Boş bırakılırsa bugün)</span></label>
-                                                <input type="date" name="odeme_tarihi" 
-                                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white">
-                                            </div>
-
-                                            <!-- Açıklama (İsteğe Bağlı) -->
-                                            <div class="mb-4">
-                                                <label class="block text-xs text-gray-600 mb-1 font-semibold">Açıklama / Not</label>
-                                                <input type="text" name="aciklama" placeholder="Örn: Evden düşülen tesisat masrafı" 
-                                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
-                                            </div>
-
-                                            <!-- Kaydet Butonu -->
-                                            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md transition">
-                                                Ödemeyi Kaydet
-                                            </button>
-                                        </form>
-                                    </details>
-
-                                </div>
-                            {% endif %}
-                        </div>
-                    </details>
-                {% endfor %}
+    {% else %}
+        <div class="flex flex-col items-center justify-center mt-10 text-center bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+            <div class="bg-gray-50 text-gray-400 p-5 rounded-full mb-4">
+                <i class="fa-solid fa-user-plus text-4xl"></i>
             </div>
-
-        {% else %}
-            <!-- KİRACI YOKSA GÖSTERİLECEK BOŞ DURUM KARTI -->
-            <div class="flex flex-col items-center justify-center mt-10 text-center bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-                <div class="bg-gray-50 text-gray-400 p-5 rounded-full mb-4">
-                    <i class="fa-solid fa-user-plus text-4xl"></i>
-                </div>
-                <h2 class="text-xl font-bold text-gray-700 mb-2">Kiracı Bulunmuyor</h2>
-                <p class="text-gray-500 mb-6 text-sm">Bu mülk için henüz bir kiracı ve kira sözleşmesi tanımlanmamış. Hemen bir sözleşme oluşturun.</p>
-                
-                <a href="{{ url_for('kiraci_ekle', id=mulk.id) }}" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">
-                    Kiracı ve Sözleşme Ekle
-                </a>
-            </div>
-        {% endif %}
-    </main>
-
-</body>
-</html>
+            <h2 class="text-xl font-bold text-gray-700 mb-2">Kiracı Bulunmuyor</h2>
+            <p class="text-gray-500 mb-6 text-sm">Bu mülk için henüz bir kiracı ve kira sözleşmesi tanımlanmamış. Hemen bir sözleşme oluşturun.</p>
+            
+            <a href="{{ url_for('kiraci_ekle', id=mulk.id) }}" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">
+                Kiracı ve Sözleşme Ekle
+            </a>
+        </div>
+    {% endif %}
+</main>
+{% endblock %}

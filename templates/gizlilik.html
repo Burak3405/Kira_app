@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Gizlilik ve Güvenlik - Kira Takibi{% endblock %}
+
+{% block header %}
+<header class="bg-white shadow-sm px-4 py-4 flex items-center sticky top-0 z-10 max-w-5xl mx-auto w-full">
+    <a href="javascript:history.back()" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
+    <h1 class="text-lg font-bold text-gray-800">Gizlilik ve Güvenlik</h1>
+</header>
+{% endblock %}
+
+{% block content %}
+<main class="max-w-3xl mx-auto p-6 mt-4 bg-white rounded-xl shadow-sm border border-gray-100 mb-10">
+    <div class="text-center mb-8">
+        <i class="fa-solid fa-shield-halved text-5xl text-blue-600 mb-4"></i>
+        <h2 class="text-2xl font-bold text-gray-800">Verileriniz Güvende</h2>
+        <p class="text-sm text-gray-500 mt-2">Kira Takibi olarak şeffaflığa ve veri güvenliğine büyük önem veriyoruz.</p>
+    </div>
+
+    <div class="space-y-8">
+        <!-- Veri Toplama -->
+        <section>
+            <h3 class="text-lg font-bold text-gray-700 mb-3 flex items-center border-b pb-2">
+                <i class="fa-solid fa-database text-blue-500 mr-2"></i> Hangi Verileri Topluyoruz?
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+                Uygulamamızı kullanabilmeniz için yalnızca kendi belirlediğiniz <strong>Kullanıcı Adı</strong> bilgisini saklıyoruz. Kendi mülk yönetiminiz için sisteme girdiğiniz mülk adresleri, kiracı ad/soyad ve telefon bilgileri ile sözleşme tutarları tamamen sizin kontrolünüzde olup, yalnızca size özel bir alanda izole edilerek veritabanımıza kaydedilir.
+            </p>
+        </section>
+
+        <!-- Sistem Güvenliği -->
+        <section>
+            <h3 class="text-lg font-bold text-gray-700 mb-3 flex items-center border-b pb-2">
+                <i class="fa-solid fa-lock text-green-500 mr-2"></i> Sistem Güvenliğini Nasıl Sağlıyoruz?
+            </h3>
+            <ul class="list-disc pl-5 space-y-3 text-sm text-gray-600">
+                <li><strong>Şifreleme :</strong> Şifreniz sistemimizde asla düz metin olarak tutulmaz. Gelişmiş şifreleme algoritmaları ile geri döndürülemez şekilde şifrelenir. Sistem yöneticisi dahil hiç kimse şifrenizi göremez.</li>
+                <li><strong>Veri İzolasyonu :</strong> Sistem "Çok Kiracılı" mimariyle tasarlanmıştır. Yaptığınız her veri tabanı sorgusu, kendi kimliğinizle filtrelenir. Başka bir kullanıcının mülklerini veya kiracılarını görmeniz veya başka birinin sizin verilerinize erişmesi mümkün değildir.</li>
+                <li><strong>Saldırı Koruması:</strong> Giriş ekranlarımız, kaba kuvvet saldırılarına karşı otomatik sınırlandırma protokolleri ile korunmaktadır.</li>
+                <li><strong>Zararlı İstek Koruması:</strong> Tüm veri giriş formlarımızda yetkisiz işlem yapılmasını engelleyen CSRF güvenlik jetonları devrededir.</li>
+            </ul>
+        </section>
+
+        <!-- Veri Paylaşımı -->
+        <section>
+            <h3 class="text-lg font-bold text-gray-700 mb-3 flex items-center border-b pb-2">
+                <i class="fa-solid fa-share-nodes text-purple-500 mr-2"></i> Veri Paylaşımı
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+                Sisteme girdiğiniz hiçbir veri (sizin bilgileriniz veya kiracılarınızın verileri) reklam, pazarlama veya analiz amacıyla <strong>üçüncü şahıslara veya şirketlere satılmaz ve onlarla paylaşılmaz.</strong> Verileriniz yalnızca size hizmet sunabilmek amacıyla sunucularımızda barındırılır.
+            </p>
+        </section>
+
+        <!-- Kullanıcı Sorumluluğu -->
+        <section>
+            <h3 class="text-lg font-bold text-gray-700 mb-3 flex items-center border-b pb-2">
+                <i class="fa-solid fa-user-check text-orange-500 mr-2"></i> Sizin Sorumluluklarınız (KVKK)
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed bg-orange-50 p-4 rounded-lg border border-orange-100">
+                Sisteme kaydettiğiniz kiracıların kişisel verilerinden (ad, soyad, telefon) <strong>Veri Sorumlusu sıfatıyla siz sorumlusunuz.</strong> Lütfen ilgili kişilerin (kiracılarınızın) bilgilerini sisteme kaydederken yasal yükümlülüklerinizi (Aydınlatma yükümlülüğü vb.) yerine getirdiğinizden emin olun. Ayrıca hesabınızın güvenliği için güçlü bir şifre seçmek ve giriş bilgilerinizi kimseyle paylaşmamak sizin sorumluluğunuzdadır.
+            </p>
+        </section>
+    </div>
+</main>
+{% endblock %}

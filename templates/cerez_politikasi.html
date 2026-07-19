@@ -1,37 +1,31 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Çerez Politikası - Kira Takibi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-50 text-gray-800 font-sans leading-relaxed">
+{% extends 'base.html' %}
 
-    <header class="bg-white shadow-sm px-4 py-4 flex items-center sticky top-0 z-10">
-        <a href="javascript:history.back()" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
-        <h1 class="text-lg font-bold text-gray-800">Çerez Politikası</h1>
-    </header>
+{% block title %}Çerez Politikası - Kira Takibi{% endblock %}
 
-    <main class="max-w-3xl mx-auto p-6 mt-4 bg-white rounded-xl shadow-sm border border-gray-100 mb-10">
-        <h2 class="text-2xl font-bold text-blue-600 mb-4">Gizliliğiniz Bizim İçin Önemli</h2>
-        <p class="mb-4 text-sm text-gray-600">
-            Kira Takibi uygulaması olarak, hizmetlerimizi güvenli ve verimli bir şekilde sunabilmek amacıyla yalnızca teknik olarak <strong>zorunlu çerezler</strong> kullanmaktayız. Sistemimizde reklam, pazarlama veya kullanıcı hareketlerini takip eden (üçüncü taraf analiz) hiçbir çerez bulunmamaktadır.
-        </p>
+{% block header %}
+<header class="bg-white shadow-sm px-4 py-4 flex items-center sticky top-0 z-10 max-w-5xl mx-auto w-full">
+    <a href="javascript:history.back()" class="text-gray-500 mr-4 text-xl"><i class="fa-solid fa-arrow-left"></i></a>
+    <h1 class="text-lg font-bold text-gray-800">Çerez Politikası</h1>
+</header>
+{% endblock %}
 
-        <h3 class="text-lg font-bold text-gray-700 mt-6 mb-2 border-b pb-2">Kullandığımız Çerezler ve Amaçları</h3>
-        <ul class="list-disc pl-5 space-y-3 text-sm text-gray-600 mb-6">
-            <li><strong>Oturum Çerezleri (Session Cookies):</strong> Sisteme güvenli bir şekilde giriş yapabilmeniz, hesaplarınız arasında geçiş yapabilmeniz ve oturumunuzun aktif kalması için gereklidir. Bu çerezler tarayıcınızı kapattığınızda veya çıkış yaptığınızda silinir.</li>
-            <li><strong>Güvenlik Çerezleri (CSRF Tokens):</strong> Kötü niyetli yazılımların veya üçüncü şahısların sizin adınıza form doldurmasını ve işlem yapmasını engellemek amacıyla kullanılan kritik güvenlik önlemleridir.</li>
-            <li><strong>Kalıcı Çerezler (Beni Hatırla):</strong> Yalnızca giriş ekranında "Beni Hatırla" seçeneğini kendi isteğinizle işaretlemeniz durumunda oluşturulur. Bu çerez, tarayıcınızı kapatsanız dahi 30 gün boyunca hesabınızda aktif kalmanızı sağlar. Çıkış yap butonuna bastığınız anda bu çerez cihazınızdan anında silinir.</li>
-        </ul>
+{% block content %}
+<main class="max-w-3xl mx-auto p-6 mt-4 bg-white rounded-xl shadow-sm border border-gray-100 mb-10">
+    <h2 class="text-2xl font-bold text-blue-600 mb-4">Gizliliğiniz Bizim İçin Önemli</h2>
+    <p class="mb-4 text-sm text-gray-600">
+        Kira Takibi uygulaması olarak, hizmetlerimizi güvenli ve verimli bir şekilde sunabilmek amacıyla yalnızca teknik olarak <strong>zorunlu çerezler</strong> kullanmaktayız. Sistemimizde reklam, pazarlama veya kullanıcı hareketlerini takip eden (üçüncü taraf analiz) hiçbir çerez bulunmamaktadır.
+    </p>
 
-        <h3 class="text-lg font-bold text-gray-700 mt-6 mb-2 border-b pb-2">Çerez Yönetimi</h3>
-        <p class="mb-4 text-sm text-gray-600">
-            Kullandığımız çerezler, uygulamanın temel fonksiyonlarını yerine getirebilmesi için hukuken "kesinlikle gerekli" kategorisinde yer aldığından, onayınıza tabi değildir. Eğer bu çerezlerin cihazınızda tutulmasını istemiyorsanız, tarayıcı ayarlarınızdan tüm çerezleri engelleyebilirsiniz. Ancak bu durumda uygulamamıza giriş yapmanız ve işlem gerçekleştirmeniz teknik olarak mümkün olmayacaktır.
-        </p>
-    </main>
+    <h3 class="text-lg font-bold text-gray-700 mt-6 mb-2 border-b pb-2">Kullandığımız Çerezler ve Amaçları</h3>
+    <ul class="list-disc pl-5 space-y-3 text-sm text-gray-600 mb-6">
+        <li><strong>Oturum Çerezleri (Session Cookies):</strong> Sisteme güvenli bir şekilde giriş yapabilmeniz, hesaplarınız arasında geçiş yapabilmeniz ve oturumunuzun aktif kalması için gereklidir. Bu çerezler tarayıcınızı kapattığınızda veya çıkış yaptığınızda silinir.</li>
+        <li><strong>Güvenlik Çerezleri (CSRF Tokens):</strong> Kötü niyetli yazılımların veya üçüncü şahısların sizin adınıza form doldurmasını ve işlem yapmasını engellemek amacıyla kullanılan kritik güvenlik önlemleridir.</li>
+        <li><strong>Kalıcı Çerezler (Beni Hatırla):</strong> Yalnızca giriş ekranında "Beni Hatırla" seçeneğini kendi isteğinizle işaretlemeniz durumunda oluşturulur. Bu çerez, tarayıcınızı kapatsanız dahi 30 gün boyunca hesabınızda aktif kalmanızı sağlar. Çıkış yap butonuna bastığınız anda bu çerez cihazınızdan anında silinir.</li>
+    </ul>
 
-</body>
-</html>
+    <h3 class="text-lg font-bold text-gray-700 mt-6 mb-2 border-b pb-2">Çerez Yönetimi</h3>
+    <p class="mb-4 text-sm text-gray-600">
+        Kullandığımız çerezler, uygulamanın temel fonksiyonlarını yerine getirebilmesi için hukuken "kesinlikle gerekli" kategorisinde yer aldığından, onayınıza tabi değildir. Eğer bu çerezlerin cihazınızda tutulmasını istemiyorsanız, tarayıcı ayarlarınızdan tüm çerezleri engelleyebilirsiniz. Ancak bu durumda uygulamamıza giriş yapmanız ve işlem gerçekleştirmeniz teknik olarak mümkün olmayacaktır.
+    </p>
+</main>
+{% endblock %}
