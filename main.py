@@ -1,20 +1,47 @@
 import os
 import calendar
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
-
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_wtf.csrf import CSRFProtect
 
 load_dotenv()
 
 app = Flask(__name__)
 
+# Proxy arkasında çalışırken gerçek IP'leri yakalamak için middleware ekliyoruz
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri="memory://" # Verileri şimdilik RAM'de tutacak
+)
+
+csrf = CSRFProtect(app)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    flash("Çok fazla giriş denemesi yaptınız. Lütfen 1 dakika bekleyip tekrar deneyin.", "error")
+    return redirect(url_for('login'))
+
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['ADMIN_USERNAME'] = os.getenv('ADMIN_USERNAME')
+
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+#.env dosyasından okutarak sadece canlı sunucuda devreye girmesini sağlıyoruz.
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
+
 
 db = SQLAlchemy(app)
 
@@ -24,7 +51,7 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(kullanici_id):
-    return Kullanicilar.query.get(int(kullanici_id))
+    return db.session.get(Kullanicilar, int(kullanici_id))
 
 class Kullanicilar(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -117,26 +144,36 @@ def register():
     return render_template('register.html') # Bu sayfayı oluşturman gerekecek
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("3 per minute", methods=["POST"])
 def login():
     if request.method == 'POST':
         kullanici_adi = request.form.get('kullanici_adi')
         sifre = request.form.get('sifre')
+        beni_hatirla = request.form.get('beni_hatirla') == 'on'
         kullanici = Kullanicilar.query.filter_by(kullanici_adi=kullanici_adi).first()
         
         if kullanici and kullanici.sifre_kontrol(sifre):
-            login_user(kullanici)
+            login_user(kullanici, remember=beni_hatirla)
+            
+            admin_kullanici = app.config.get('ADMIN_USERNAME')
+            if admin_kullanici and kullanici.kullanici_adi == admin_kullanici.strip():
+                return redirect(url_for('admin_panel'))
+
             return redirect(url_for('ana_sayfa'))
         else:
             flash('Hatalı kullanıcı adı veya şifre!', 'error')
             
-    return render_template('login.html') # Bu sayfayı oluşturman gerekecek
+    return render_template('login.html') 
+
+@app.route('/cerez-politikasi')
+def cerez_politikasi():
+    return render_template('cerez_politikasi.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
 
 @app.route('/')
 @login_required
@@ -487,6 +524,72 @@ def odeme_guncelle(id):
             
     db.session.commit()
     return redirect(url_for('mulk_detayi', id=odeme.sozlesme.mulk_id))
+
+
+@app.route('/admin_panel')
+@login_required
+def admin_panel():
+    admin_kullanici = app.config.get('ADMIN_USERNAME')
+
+    if current_user.kullanici_adi != admin_kullanici:
+        return redirect(url_for('ana_sayfa'))
+
+    # Admin hariç tüm kullanıcıları listele
+    kullanicilar = Kullanicilar.query.filter(Kullanicilar.kullanici_adi != admin_kullanici).all()
+    
+    # İstatistikler
+    toplam_kullanici = len(kullanicilar)
+    toplam_mulk = Mulkler.query.count()
+    toplam_kiraci = Kiracilar.query.count()
+    
+    # MySQL Veritabanı boyutunu hesaplama (MB cinsinden)
+    try:
+        
+        sorgu = db.text("SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) FROM information_schema.TABLES WHERE table_schema = DATABASE()")
+        result = db.session.execute(sorgu)
+        db_boyutu = result.scalar() or 0.0
+    except Exception as e:
+        db_boyutu = 0.0
+
+    istatistikler = {
+        'toplam_kullanici': toplam_kullanici,
+        'toplam_mulk': toplam_mulk,
+        'toplam_kiraci': toplam_kiraci,
+        'db_boyutu': db_boyutu
+    }
+
+    return render_template('admin_panel.html', kullanicilar=kullanicilar, istatistikler=istatistikler)
+
+@app.route('/admin/kullanici_sil/<int:id>', methods=['POST'])
+@login_required
+def kullanici_sil(id):
+    admin_kullanici = app.config.get('ADMIN_USERNAME')
+    if current_user.kullanici_adi != admin_kullanici:
+        return redirect(url_for('ana_sayfa'))
+        
+    silinecek_kullanici = Kullanicilar.query.get_or_404(id)
+    
+    # Cascade (Zincirleme) Silme İşlemi: Kullanıcıya bağlı her şeyi temizle
+    # 1. Mülkleri, Sözleşmeleri ve Ödemeleri sil
+    for mulk in silinecek_kullanici.mulkler:
+        for sozlesme in mulk.sozlesmeler:
+            for odeme in sozlesme.odemeler:
+                db.session.delete(odeme)
+            db.session.delete(sozlesme)
+        db.session.delete(mulk)
+        
+    # 2. Kiracıları sil
+    for kiraci in silinecek_kullanici.kiracilar:
+        db.session.delete(kiraci)
+        
+    # 3. Son olarak kullanıcıyı sil
+    kullanici_adi_yedek = silinecek_kullanici.kullanici_adi
+    db.session.delete(silinecek_kullanici)
+    db.session.commit()
+    
+    flash(f'{kullanici_adi_yedek} kullanıcısı ve tüm verileri sistemden kalıcı olarak silindi.', 'success')
+    return redirect(url_for('admin_panel'))
+
 
 if __name__ == '__main__':
     app.run(debug=True) #host='0.0.0.0', port=5000,

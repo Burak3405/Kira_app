@@ -28,6 +28,7 @@
         {% endwith %}
 
         <form action="{{ url_for('register') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="mb-4">
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="kullanici_adi">
                     Kullanıcı Adı Belirleyin

@@ -23,6 +23,7 @@
         </div>
 
         <form method="POST" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <div class="mb-4">
                 <label class="block text-sm text-gray-600 mb-1">Eski Kira Bedeli</label>

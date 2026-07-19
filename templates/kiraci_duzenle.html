@@ -19,6 +19,7 @@
 
     <main class="p-4 mt-2">
         <form method="POST" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <h2 class="text-sm font-bold text-blue-600 mb-4 border-b pb-2">Kiracı Bilgileri</h2>
             
