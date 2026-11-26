@@ -1,7 +1,7 @@
 [project]
 name = "kira-app-python"
 version = "0.1.0"
-description = "Add your description here"
+description = "Ev sahipleri için mülk, kiracı ve aylık kira ödemesi takip uygulaması (Flask + MySQL)"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
